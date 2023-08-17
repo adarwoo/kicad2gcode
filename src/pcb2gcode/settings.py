@@ -14,10 +14,10 @@ MAX_SPINDLE_SPEED_RPM = 24000
 MIN_SPINDLE_SPEED = 10000
 
 # Standard drill sizes in mm - Change to match own supplies
-DRILLBIT_SIZES = uniontool.DRILLBIT_STANDARD_SIZES_MM
+DRILLBIT_SIZES = uniontool.DRILLBIT_STANDARD_SIZES
 
 # Standard router bits in mm - Change to match own supplier
-ROUTERBIT_SIZES = uniontool.ROUTERBIT_STANDARD_SIZES_MM
+ROUTERBIT_SIZES = uniontool.ROUTERBIT_STANDARD_SIZES
 
 # Check the bit size is within the industry range
 CHECK_WITHIN_DIAMETERS_ABSOLUTE_RANGE = lambda d: 0.05 <= d <= 6.4

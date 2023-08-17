@@ -1,0 +1,26 @@
+# Configuration for CNC settings
+
+setup:
+  spindle_speed:
+    max: 24000
+    min: 10000
+  z_feedrate:
+    min: "200"
+    max: "4000"
+  safe_distance: "0.5mm"
+  exit_depth_min: "0.7mm"
+  drillbit_point_angle: 135
+  slot_peck_drilling:
+    max_length_to_diameter: 4
+    pecks_per_hole_diameter: 4
+  oversizing_allowance_percent: 5
+  downsizing_allowance_percent: 10
+  router_diameter_for_contour: "1.6mm"
+
+stock_room:
+  drillbits:
+    sizes: ["0.8", "1mm", "1/8in"]
+  routerbits:
+    sizes: ["1mm", "2mm", "3mm"]
+  backboard:
+    thicknesses: ["2mm"]

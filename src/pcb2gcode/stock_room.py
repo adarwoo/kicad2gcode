@@ -24,10 +24,10 @@ class CuttingTool(Consumable):
     def __init__(self, diameter, units=):
         self.diameter_um
 
-class Fixture
+class Fixture:
+    pass
 
 
 class StockRoom:
     pass
 
-class 

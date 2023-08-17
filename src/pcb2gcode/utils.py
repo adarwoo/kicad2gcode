@@ -5,10 +5,7 @@ import bisect
 from settings import *
 
 
-M2U = lambda n: int(1e6*n)
-U2M = lambda n: float(n/1e6)
-TO_UM = lambda n: M2U(n) if type(n) is float or CHECK_WITHIN_DIAMETERS_ABSOLUTE_RANGE(n) else n
-TO_MM = lambda n: U2M(n) if type(n) is int and not CHECK_WITHIN_DIAMETERS_ABSOLUTE_RANGE(n) else n
+
 REAL = lambda n: n.imag if n.imag else n
 DIA_TO_STR = lambda n: f"R{TO_MM(n.imag)}" if n.imag else f"{TO_MM(n)}"
 
