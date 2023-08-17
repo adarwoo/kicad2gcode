@@ -1,4 +1,6 @@
 #!/usr/bin/python3
+from utils import interpolate_lookup
+from config import config
 from units import Quantity
 
 # Defines the StockRoom class.
@@ -28,4 +30,13 @@ class CuttingTool(Consumable):
     def __init__(self, diameter: Quantity):
         self.diameter = diameter
 
+    def __call__(self, target_unit=None):
+        return self.diameter(target_unit)
 
+    @property
+    def max_rpm(self):
+        return interpolate_lookup(config.drill_data, self(), 2)
+
+    @property
+    def max_z_feedrate(self):
+        return interpolate_lookup(config.drill_data, 3)
