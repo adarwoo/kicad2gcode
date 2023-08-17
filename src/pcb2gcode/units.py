@@ -47,6 +47,20 @@ class Quantity:
     def __repr__(self):
         return f"{self._value}{self.base_unit.name}"
 
+    def __eq__(self, other):
+        if isinstance(other, (int, float)):
+            return self.value == other
+        elif isinstance(other, Quantity):
+            converted_other = other(self.base_unit)
+            return self.value == converted_other            
+        else:
+            raise TypeError("Unsupported comparison type")
+
+    def __hash__(self):
+        """
+        Convert to the smallest
+        """
+        return hash(self.value * self.base_unit.conversion_factor)
 
 class Unit:
     """
@@ -60,6 +74,9 @@ class Unit:
         return Quantity(value, self)
 
     def conversion_to(self, other_unit):
+        """
+        Converts to another unit
+        """
         return self.conversion_factor / other_unit.conversion_factor
 
     def __rmul__(self, other):
@@ -94,3 +111,8 @@ if __name__ == "__main__":
     b = [3, 4, 6] * mm
     print(a)  # Output: 4 mm
     print(b)  # Output: [3 mm, 4 mm, 6 mm]
+
+    k = set([2,3,25.4]*mm)
+    assert( inch(1) in k )
+
+
