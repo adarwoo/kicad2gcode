@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+from units import Quantity
 
 # Defines the StockRoom class.
 # This class defines a virtual stock room storing Consumables
@@ -11,23 +12,20 @@ class StockItem:
     """
     The base class for all items stored in the stock room
     """
-    def __init__(self):
-        pass
+    def __init__(self, name, **kwargs):
+        self.name=name
+        self.conf=kwargs
 
-
+# Types only
 class Consumable(StockItem):
-    def __init__(self):
-        pass
+    pass
+
+class Fixture(StockItem):
+    pass
 
 
 class CuttingTool(Consumable):
-    def __init__(self, diameter):
+    def __init__(self, diameter: Quantity):
         self.diameter = diameter
 
-class Fixture:
-    pass
-
-
-class StockRoom:
-    pass
 
