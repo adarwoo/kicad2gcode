@@ -21,8 +21,8 @@ class Consumable(StockItem):
 
 
 class CuttingTool(Consumable):
-    def __init__(self, diameter, units=):
-        self.diameter_um
+    def __init__(self, diameter):
+        self.diameter = diameter
 
 class Fixture:
     pass
