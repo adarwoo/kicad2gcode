@@ -1,26 +1,89 @@
 # Configuration for CNC settings
+# Note: Dimensions can be specified as numbers or strings.
+# Numbers are always taken as 'mm'. Strings can have units and fractions.
+# Valid units are 'cm', 'mm', 'in', 'inch', 'mil', 'thou'
+# Feedrate numbers are taken as 'mm/min'. Valid units are mm/min, mm/s, in/min, ipm
 
+# Strings can  foizes a as 'mm' and  is required (diameter, feedrate), 
+
+# Global setup for all tasks
 setup:
+  # Practical spindle limits in RPM
   spindle_speed:
     max: 24000
     min: 10000
+  # Practical CNC limits in mm/min
   z_feedrate:
-    min: "200"
-    max: "4000"
+    min: 200
+    max: 4000
+  # Minimum distance to the machining plate
   safe_distance: "0.5mm"
+  # Min depth beyond the bottom of the PCB from the tip of the bit
   exit_depth_min: "0.7mm"
+  # Drillbit endpoint geometry angle in degrees
+  # An angle of 180 means the bit bottom is flat.
+  # For larger bits, the angled tip needs to clear the bottom of the PCB
+  #  which adds to the required depth and could exceed the backboard thickness
   drillbit_point_angle: 135
+  # Setup for peck drilling slots or oblong holes
   slot_peck_drilling:
-    max_length_to_diameter: 4
-    pecks_per_hole_diameter: 4
+    # Limit the peck drilling to small slots only
+    # If the slot length - center to center - exeeds n times the bit diameter,
+    # use a routerbit instead
+    # If 0, routerbit will always be used - with no pre-drilling
+    max_length_to_bit_diameter: 4
+    # Number of pecks in 1 hole. If 2, the hole is drilled, the next peck
+    # is half way of the hole diameter. 
+    # Increase to get a smoother wall of the slot, decrease to limits the number of drills
+    # Recommended value by Uniontool is 4 (4 pecks per hole)
+    pecks_per_hole: 4
+  # Allowance for drilling a slightly larger hole
+  # So, 10% means that a 1mm hole could be drilled with a 1.1mm bit
+  # The application will try to use the most suitable bit, but a margin is 
+  #  requiered since the stock does not carry all possible sizes
   oversizing_allowance_percent: 5
+  # Same for under side. A 10% would allow drilling a 1mm with a .9mm bit
   downsizing_allowance_percent: 10
+  # Prefered routing bit size for routing the countour of the board
   router_diameter_for_contour: "1.6mm"
 
-stock_room:
+# Describe consumable items available from your stock
+stock:
+  # List available drillbit sizes
   drillbits:
-    sizes: ["0.8", "1mm", "1/8in"]
+    # List all available sizes
+    sizes:
+      - 0.35
+      - 0.4
+      - 0.45
+      - 0.5
+      - 0.6
+      - 0.7
+      - 0.8
+      - 0.9
+      - 1.0
+      - 1.1
+      - 1.2
+      - 1.3
+      - 1.4
+      - 1.5
+      - 1.6
+      - 1.7
+      - 1.8
+      - 1.9
+      - 2.0
+      - 2.2
+      - 2.4
+      - 2.6
+      - 2.8
+      - 3.0
+      - 3.1
+      - "1/8in"    
+  # List available routerbits cutters
   routerbits:
-    sizes: ["1mm", "2mm", "3mm"]
+    # Same comment as with drillbits
+    sizes: [0.8, 1, 1.2, 1.5, 1.6, 2, 3]
+  # The backboard, or exit board or martyr board stock
   backboard:
-    thicknesses: ["2mm"]
+    # Thickness of the backboard being used
+    thicknesses: "2mm"

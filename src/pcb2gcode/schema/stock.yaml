@@ -8,7 +8,7 @@ properties:
     description: |
       Available drillbit sizes. If a number is used, the unit defaults to mm.
       If a string is used, the unit may be specified from mm, cm, in, thou and mil.
-      Simple fractions can be used too such as 3/64in
+      Simple fractions can be used such as 3/64in
 
     default:
       - 0.05
