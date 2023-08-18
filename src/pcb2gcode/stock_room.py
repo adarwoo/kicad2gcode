@@ -40,3 +40,21 @@ class CuttingTool(Consumable):
     @property
     def max_z_feedrate(self):
         return interpolate_lookup(config.drill_data, 3)
+
+# Return the recommended router RPM based on the diameter (mm)
+ROUTERBIT_SPINDLE_SPEED_FROM_DIAMETER = lambda d: INTERPOLATE_LUT_AT(
+    d, uniontool.ROUTERBIT_DATA_LOOKUP, 0)
+
+# Return the Z feedrate of the router bit based on the diameter (mm)
+# Note : This feedrate assumes optimum RPM. If the RPM is less, slow the feed proportionally.
+ROUTERBIT_Z_FEEDRATE_FROM_DIAMETER = lambda d: INTERPOLATE_LUT_AT(
+    d, uniontool.ROUTERBIT_DATA_LOOKUP, 2, 1000)
+
+# Returns the table feedrate in mm/min of the router bit based on the diameter (mm)
+# Note : This feedrate assumes optimum RPM. If the RPM is less, slow the feed proportionally.
+ROUTERBIT_TABLE_FEEDRATE_FROM_DIAMETER = lambda d: INTERPOLATE_LUT_AT(
+    d, uniontool.ROUTERBIT_DATA_LOOKUP, 1, 1000)
+
+# Return the depth (mm) into the backing board required for the given bit diameter (mm)
+ROUTERBIT_EXIT_DEPTH_FROM_DIAMETER = lambda d: INTERPOLATE_LUT_AT(
+    d, uniontool.ROUTERBIT_DATA_LOOKUP, 3)
