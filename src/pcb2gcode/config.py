@@ -4,9 +4,11 @@
 #
 import logging
 
-from constants import CONFIG_PATH
+from constants import CONFIG_USER_PATH
 from pathlib import Path
-    
+
+import jsonschema
+
 import ruamel.yaml
 from ruamel.yaml.comments import CommentedMap, CommentedSeq
 
@@ -39,14 +41,14 @@ class YamlConfigManager:
                 default_value = __class__._populate_defaults({}, prop_schema)
                 default_obj[prop_name] = default_value
             return default_obj
-        
+
         if 'type' in schema and schema['type'] == 'array':
             default_array = CommentedSeq()
             if 'items' in schema:
                 default_item = __class__._populate_defaults({}, schema['items'])
                 default_array.append(default_item)
             return default_array
-        
+
         return None
 
     @staticmethod
@@ -62,56 +64,71 @@ class YamlConfigManager:
             for prop_name, prop_schema in schema.get('properties', {}).items():
                 if prop_name in node:
                     __class__._add_comments(node[prop_name], prop_schema, node, indent+2)
-        
+
         if 'type' in schema and schema['type'] == 'array':
             if 'items' in schema:
                 __class__._add_comments(node[0], schema['items'], node, indent+2)
 
     def load_schema(self):
+        import sys
         from importlib import resources
-        from constants import SCHEMA_FILE__FILENAME_SUFFIX
+        from constants import SCHEMA_FILE__FILENAME_SUFFIX, SCHEMA_PATH
 
-        self.schema_file_path = Path(
-            self.section_name + SCHEMA_FILE__FILENAME_SUFFIX)
-        
+        self.schema_file_path = SCHEMA_PATH / Path(self.section_name + SCHEMA_FILE__FILENAME_SUFFIX)
+
         if not self.schema_file_path.exists():
-            logger.critical(f"Missing schema file: {self.schema_file_path}")
+            logger.critical("Missing schema file: %s", self.schema_file_path)
             raise RuntimeError("Corrupt package")
-        
+
         try:
-            with open(self.schema_file_path, 'r') as self.schema_file_path:
+            with open(self.schema_file_path, 'r', encoding="utf-8") as self.schema_file_path:
                 schema = ruamel.yaml.YAML().load(self.schema_file_path)
-        except Exception as e:
-            logger.critical(f"Failed to process the schema file: {self.schema_file_path}")
-            logger.error("Got:" + e)
-            raise RuntimeError("Schema error")
-        
+                validator = jsonschema.Draft7Validator(schema)
+        except Exception as exception:
+            logger.critical("Failed to process the schema file: %s", self.schema_file_path)
+            logger.error("Got: %s", exception)
+            raise RuntimeError(exception) from exception
+
         # The schema must be error free
-        return schema
-    
+        return schema, validator
+
     def load_content(self):
         retval = {}
 
-        if self.config_file_path.exists():
-            # Parse it!
-            try:
-                retval = {} # TODO
-            except Exception as e:
-                # Bad parsing - rename
-                logger.error(f"Failed to interpret the content of {self.config_file_path}")
-                logger.error("Got: " + e)
+        if not self.config_file_path.exists():
+            logger.info("Configuration file '%s' is missing and will be created.", self.config_file_path)
+            return retval
 
-                # Try renaming the bad file
-                newname = self.config_file_path.with_suffix(".yaml.old")
-                try:
-                    self.config_file_path.replace(newname)
-                    logger.error(f"Renaming the file {newname}")
-                except Exception as e:
-                    logger.error(f"Failed to rename the file {self.config_file_path} to {newname}")
-                    logger.error("Got: " + e)
+        # Parse it!
+        try:
+            with open(self.config_file_path) as stream:
+                retval = ruamel.yaml.safe_load(stream)
+                jsonschema.validate(instance=stream, schema=self.schema)
+            
+            return retval
+        except OSError:
+            logger.error("File '%s' could not be opened!", self.config_file_path)
+        except YAML.YAMLError as exception:
+            logger.error("File '%s' is not a valid Yaml document!", self.config_file_path)
+            logger.error(e)
+        except jsonschema.ValidationError:
+            logger.error("File '%s' is not structured correctly!", self.config_file_path)
+        except Exception as exception:
+            logger.error("Failed to interpret the content of '%s'", self.config_file_path)
+            logger.error("Got: %s", exception)
+
+        # Since we failed to include the file succesfully, rename this one to make room for a fresh one
+        newname = self.config_file_path.with_suffix(".yaml.old")
+
+        try:
+            self.config_file_path.replace(newname)
+            logger.warn("Renaming the file %s", newname)
+        except Exception as exception:
+            logger.error("Failed to rename the file '%s' to '%s'", self.config_file_path, newname)
+            logger.error("Got: %s", exception)
 
         return retval
-    
+
     def generate_default_content(self):
         # Generate a default content
         default_config = self.populate_defaults({}, self.schema)
@@ -124,30 +141,37 @@ class YamlConfigManager:
         try:
             with open(self.config_file_path, 'w') as content_file:
                 ruamel.yaml.dump(self.content, content_file, Dumper=ruamel.yaml.RoundTripDumper)
-        except Exception as e:
-            logger.error(f"Failed to create a default configuration file {self.config_file_path}")
+        except Exception as exception:
+            logger.error("Failed to create a default configuration file '%s'", self.config_file_path)
+            logger.error("Got: %s", exception)
 
-    def __init__(self, section_name) -> dict:
+    def __init__(self, section_name: str) -> dict:
         """
-        TODO:
-        @param section_name The name of section of configuration to handle such as 'rack'
+        Create an instance of a Yaml configuration manager
+        This manager is reponsible for processing a given Yaml configuration file.
+        Doing so, guarantees a content to the caller.
+        If the configuration file exists, it is parsed and checked against a schema.
+        On errors, the file is renamed, an error generated, and a new file is created using the
+        default values.
+
+        @param section_name The name of section of configuration to handle such as 'racks'
         """
         from os.path import expanduser
         from constants import CONFIG_USER_PATH
 
         self.section_name = section_name
         self.config_file_path = Path(
-            expanduser(CONFIG_USER_PATH) / section_name + ".yaml")
+            expanduser(CONFIG_USER_PATH) / Path(section_name + ".yaml")
+        )
 
-        self.schema = self.load_schema()
+        self.schema, self.validator = self.load_schema()
         self.content = self.load_content()
 
         if not self.content:
             self.content = self.generate_default_content()
             self.write_content()
 
-    @property
-    def content(self):
+    def get_content(self):
         return self.content
 
 
