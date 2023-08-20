@@ -57,7 +57,7 @@ class YamlConfigManager:
         Write the default data to a YAML file with comments
         """
         if 'description' in schema:
-            if node:
+            if node and isinstance(node, CommentedMap):
                 node.yaml_set_start_comment(schema['description'], indent)
 
         if 'type' in schema and schema['type'] == 'object':
@@ -95,8 +95,12 @@ class YamlConfigManager:
     def load_content(self):
         retval = {}
 
-        if not self.config_file_path.exists():
-            logger.info("Configuration file '%s' is missing and will be created.", self.config_file_path)
+        try:
+            if not self.config_file_path.exists():
+                logger.info("Configuration file '%s' is missing and will be created.", self.config_file_path)
+                return retval
+        except PermissionError:
+            logger.info("Configuration file '%s' cannot be accessed.", self.config_file_path)
             return retval
 
         # Parse it!
@@ -131,13 +135,26 @@ class YamlConfigManager:
 
     def generate_default_content(self):
         # Generate a default content
-        default_config = self.populate_defaults({}, self.schema)
-        self.add_comments(default_config, self.schema)
+        default_config = self._populate_defaults({}, self.schema)
+        self._add_comments(default_config, self.schema)
 
         return default_config
 
     def write_content(self):
         # Overwrite the file
+        # Make sure the directory exists
+        config_dir = self.config_file_path.parent
+
+        if not config_dir.exists():
+            try:
+                config_dir.mkdir(644, True, True)
+            except Exception as exception:
+                logger.error("Failed to create the directory '%s'", config_dir)
+                logger.error("Got: %s", exception)
+
+                # File won't be created
+                return
+
         try:
             with open(self.config_file_path, 'w') as content_file:
                 ruamel.yaml.dump(self.content, content_file, Dumper=ruamel.yaml.RoundTripDumper)
@@ -181,7 +198,7 @@ class Config:
 
         for section in CONFIG_SECTIONS:
             yaml_config = YamlConfigManager(section)
-            setattr(self, section, yaml_config.content)
+            setattr(self, section, yaml_config.get_content())
 
 
 # Create a unique config instance
