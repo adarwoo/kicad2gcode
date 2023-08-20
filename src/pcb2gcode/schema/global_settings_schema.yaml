@@ -8,20 +8,20 @@ properties:
         type: object
         properties:
           max:
+            description: "Maximum spindle speed in RPM."
             anyOf:
               - type: "number"
               - type: "string"
                 pattern: "^(?:\\d+(?:\\.\\d+)?)(?:rpm)$"
             default: 24000
-            description: "Maximum spindle speed in RPM."
             minimum: 0
           min:
+            description: "Minimum spindle speed in RPM."
             anyOf:
               - type: "number"
               - type: "string"
                 pattern: "^(?:\\d+(?:\\.\\d+)?)(?:rpm)$"
             default: 10000
-            description: "Minimum spindle speed in RPM."
             minimum: 0
         required: [max, min]
         description: "Practical spindle limits in RPM."
