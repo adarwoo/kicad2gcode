@@ -1,17 +1,19 @@
+#!/usr/bin/env python3
+
 #
 # If a file does not exist, create it and load it.
 # The default path 
 #
+import jsonschema
 import logging
 
 from constants import CONFIG_USER_PATH
 from pathlib import Path
 
-import jsonschema
+
 
 import ruamel.yaml
 from ruamel.yaml.comments import CommentedMap, CommentedSeq
-
 
 logger = logging.getLogger(__name__)
 
@@ -112,7 +114,7 @@ class YamlConfigManager:
             return retval
         except OSError:
             logger.error("File '%s' could not be opened!", self.config_file_path)
-        except YAML.YAMLError as exception:
+        except ruamel.yaml.YAMLError as exception:
             logger.error("File '%s' is not a valid Yaml document!", self.config_file_path)
             logger.error(e)
         except jsonschema.ValidationError:
@@ -126,7 +128,7 @@ class YamlConfigManager:
 
         try:
             self.config_file_path.replace(newname)
-            logger.warn("Renaming the file %s", newname)
+            logger.warning("Renaming the file %s", newname)
         except Exception as exception:
             logger.error("Failed to rename the file '%s' to '%s'", self.config_file_path, newname)
             logger.error("Got: %s", exception)
@@ -198,8 +200,18 @@ class Config:
 
         for section in CONFIG_SECTIONS:
             yaml_config = YamlConfigManager(section)
+
+            # Multiword sections should be abreviated. Global settings becomes gs
+            if '_' in section:
+                section = ''.join([word[0] for word in section.split('_')])
+
+            # Add to the config object
             setattr(self, section, yaml_config.get_content())
 
+if __name__ == "__main__":
+    import logging
+    import sys
+    logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
 # Create a unique config instance
 config = Config()

@@ -14,4 +14,4 @@ CONFIG_USER_PATH = "~/.pcb2gcode"
 SCHEMA_FILE__FILENAME_SUFFIX="_schema.yaml"
 
 # Section names
-CONFIG_SECTIONS = ["global_settings", "machining_data", "stock_items", "racks"]
+CONFIG_SECTIONS = ["global_settings", "machining_data", "stock", "rack"]
