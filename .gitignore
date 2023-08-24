@@ -140,6 +140,3 @@ dmypy.json
 
 # MacOS
 .DS_Store
-
-# Poetry
-poetry.lock
