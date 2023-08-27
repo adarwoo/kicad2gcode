@@ -2,7 +2,7 @@
 
 #
 # If a file does not exist, create it and load it.
-# The default path 
+# The default path
 #
 import jsonschema
 import logging
@@ -10,12 +10,43 @@ import logging
 from constants import CONFIG_USER_PATH
 from pathlib import Path
 
-
-
 import ruamel.yaml
 from ruamel.yaml.comments import CommentedMap, CommentedSeq
+from ruamel.yaml.error import CommentMark
 
 logger = logging.getLogger(__name__)
+
+if not hasattr(CommentedMap, "yaml_set_comment_before_key"):
+    def override_set_comment_before_key(self, key, comment, column=None, clear=False):
+        """
+        append comment to list of comment lines before key, '# ' is inserted
+            before the comment
+        column: determines indentation, if not specified take indentation from
+                previous comment, otherwise defaults to 0
+        clear: if True removes any existing comments instead of appending
+        """
+        key_comment = self.ca.items.setdefault(key, [None, [], None, None])
+        if clear:
+            key_comment[1] = []
+        comment_list = key_comment[1]
+        if comment:
+            comment_start = '# '
+            if comment[-1] == '\n':
+                comment = comment[:-1]  # strip final newline if there
+        else:
+            comment_start = '#'
+        if column is None:
+            if comment_list:
+                 # if there already are other comments get the column from them
+                column = comment_list[-1].start_mark.column
+            else:
+                column = 0
+        start_mark = CommentMark(column)
+        comment_list.append(ruamel.yaml.tokens.CommentToken(
+            comment_start + comment + '\n', start_mark, None))
+        return self
+
+    CommentedMap.yaml_set_comment_before_key = override_set_comment_before_key
 
 
 class YamlConfigManager:
@@ -25,51 +56,69 @@ class YamlConfigManager:
      - It tries to open a configuration file
      - If opens OK - tries to parse it then validate the content against the schema.
      -   If it validates - It returns the content as a Python object
-     -   Else, 
-            it renames the config file 
+     -   Else,
+            it renames the config file
             Tries to generates a new default content based on the schema file
      -      it returns the default content
     """
     @staticmethod
-    def _populate_defaults(node, schema):
+    def _populate_defaults(schema):
+        retval = None
+
         if 'default' in schema:
-            return schema['default']
-        if 'const' in schema:
-            return schema['const']
-        
-        if 'type' in schema and schema['type'] == 'object':
+            retval = schema['default']
+        elif 'const' in schema:
+            retval = schema['const']
+        elif 'type' in schema and schema['type'] == 'object':
             default_obj = CommentedMap()
+
             for prop_name, prop_schema in schema.get('properties', {}).items():
-                default_value = __class__._populate_defaults({}, prop_schema)
+                default_value = __class__._populate_defaults(prop_schema)
                 default_obj[prop_name] = default_value
-            return default_obj
 
-        if 'type' in schema and schema['type'] == 'array':
+            retval = default_obj
+        elif 'type' in schema and schema['type'] == 'array':
             default_array = CommentedSeq()
-            if 'items' in schema:
-                default_item = __class__._populate_defaults({}, schema['items'])
-                default_array.append(default_item)
-            return default_array
 
-        return None
+            if 'items' in schema:
+                default_item = __class__._populate_defaults(schema['items'])
+                default_array.append(default_item)
+
+            retval = default_array
+
+        return retval
 
     @staticmethod
-    def _add_comments(node, schema, owner=None, indent=0):
+    def _add_comments(node, schema, add_comment=None, indent=0):
         """
-        Write the default data to a YAML file with comments
+        Given the fully formed node, add comments using the schema description
         """
         if 'description' in schema:
-            if node and isinstance(node, CommentedMap):
-                node.yaml_set_start_comment(schema['description'], indent)
+            desc = schema['description']
 
-        if 'type' in schema and schema['type'] == 'object':
+            if node and isinstance(node, CommentedMap):
+                node.yaml_set_start_comment(desc, indent)
+
+            if add_comment:
+                print(desc)
+                add_comment(desc)
+
+        if schema.get('type') == 'object':
             for prop_name, prop_schema in schema.get('properties', {}).items():
+                # Create a lambda for adding the comment
+                if isinstance(node[prop_name], CommentedMap):
+                    add_comment = lambda before: node.yaml_set_comment_before_after_key(prop_name, None, 0, before, 0)
+                else:
+                    print("XXX", prop_name)
+                    add_comment = lambda before: node.yaml_set_comment_before_key(prop_name, before)
+
                 if prop_name in node:
-                    __class__._add_comments(node[prop_name], prop_schema, node, indent+2)
+                    __class__._add_comments(node[prop_name], prop_schema, add_comment, indent+2)
 
         if 'type' in schema and schema['type'] == 'array':
             if 'items' in schema:
-                __class__._add_comments(node[0], schema['items'], node, indent+2)
+                __class__._add_comments(node[0], schema['items'], None, indent+2)
+
 
     def load_schema(self):
         import sys
@@ -108,17 +157,21 @@ class YamlConfigManager:
         # Parse it!
         try:
             with open(self.config_file_path) as stream:
-                retval = ruamel.yaml.safe_load(stream)
-                jsonschema.validate(instance=stream, schema=self.schema)
-            
+                retval = ruamel.yaml.round_trip_load(stream)
+                jsonschema.validate(retval, self.schema)
+
+                for key, value in retval.items():
+                    pass
+
             return retval
         except OSError:
             logger.error("File '%s' could not be opened!", self.config_file_path)
         except ruamel.yaml.YAMLError as exception:
             logger.error("File '%s' is not a valid Yaml document!", self.config_file_path)
             logger.error(e)
-        except jsonschema.ValidationError:
+        except jsonschema.ValidationError as exc:
             logger.error("File '%s' is not structured correctly!", self.config_file_path)
+            logger.info("Details:\n%s", exc)
         except Exception as exception:
             logger.error("Failed to interpret the content of '%s'", self.config_file_path)
             logger.error("Got: %s", exception)
@@ -137,7 +190,7 @@ class YamlConfigManager:
 
     def generate_default_content(self):
         # Generate a default content
-        default_config = self._populate_defaults({}, self.schema)
+        default_config = self._populate_defaults(self.schema)
         self._add_comments(default_config, self.schema)
 
         return default_config
@@ -149,7 +202,7 @@ class YamlConfigManager:
 
         if not config_dir.exists():
             try:
-                config_dir.mkdir(644, True, True)
+                config_dir.mkdir(0o0755, True, True)
             except Exception as exception:
                 logger.error("Failed to create the directory '%s'", config_dir)
                 logger.error("Got: %s", exception)
@@ -159,7 +212,7 @@ class YamlConfigManager:
 
         try:
             with open(self.config_file_path, 'w') as content_file:
-                ruamel.yaml.dump(self.content, content_file, Dumper=ruamel.yaml.RoundTripDumper)
+                ruamel.yaml.round_trip_dump(self.content, content_file, Dumper=ruamel.yaml.RoundTripDumper)
         except Exception as exception:
             logger.error("Failed to create a default configuration file '%s'", self.config_file_path)
             logger.error("Got: %s", exception)
@@ -186,7 +239,7 @@ class YamlConfigManager:
         self.schema, self.validator = self.load_schema()
         self.content = self.load_content()
 
-        if not self.content:
+        if self.content == {}:
             self.content = self.generate_default_content()
             self.write_content()
 
