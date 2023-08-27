@@ -4,63 +4,60 @@ revision: "1.0"
 type: object
 description: pcb2gcode rack(s) description and selection
 properties:
-  config:
+  datetime:
+    type: string
+    description: Last time the file was re-generated
+    format: datetime
+    default: 19710101T00:00:00
+  issue:
+    type: integer
+    description: Increments for every update
+    default: 0
+  use:
+    type: ["string", "null"]
+    description: id of the rack to use
+  size:
+    type: integer
+    description: Usable size of the rack, that is, maximum number of tools to load
+    default: 0
+  racks:
     type: object
-    properties:
-      datetime:
-        type: string
-        description: Last time the file was re-generated
-        format: datetime
-        default: 19710101T00:00:00
-      issue:
-        type: integer
-        description: Increments for every update
-        default: 0
-      use:
-        type: ["string", "null"]
-        description: id of the rack to use
-      size:
-        type: integer
-        description: Usable size of the rack, that is, maximum number of tools to load
-        default: 0
-      racks:
-        type: object
-        description: List of racks
-        patternProperties:
-          "^[a-zA-Z0-9_-]+$":
-            type: array
-            items:
-              type: object
-              properties:
-                number:
-                  type: integer
-                drill:
-                  anyOf:
-                    - type: number
-                    - type: string
-                      pattern: "^(?:\\d+(?:\\.\\d+)?|\\d+\\/\\d+)(?:mm|in|mil|thou|inch|cm)$"
-                router:
-                  anyOf:
-                    - type: number
-                    - type: string
-                      pattern: "^(?:\\d+(?:\\.\\d+)?|\\d+\\/\\d+)(?:mm|in|mil|thou|inch|cm)$"
-                use:
-                  type: boolean
-                  description: If set to false, the slot will not be used. Defaults to true.
-              oneOf:
-                - required:
-                    - drill
-                  not:
-                    required:
-                      - router
-                - required:
-                    - router
-                  not:
-                    required:
-                      - drill
-                - required:
-                    - use
-              additionalProperties: false
-    required:
-      - size
-    additionalProperties: false
+    description: List of racks
+    patternProperties:
+      "^[a-zA-Z0-9_-]+$":
+        type: array
+        items:
+          type: object
+          properties:
+            number:
+              type: integer
+            drill:
+              anyOf:
+                - type: number
+                - type: string
+                  pattern: "^(?:\\d+(?:\\.\\d+)?|\\d+\\/\\d+)(?:mm|in|mil|thou|inch|cm)$"
+            router:
+              anyOf:
+                - type: number
+                - type: string
+                  pattern: "^(?:\\d+(?:\\.\\d+)?|\\d+\\/\\d+)(?:mm|in|mil|thou|inch|cm)$"
+            use:
+              type: boolean
+              description: If set to false, the slot will not be used. Defaults to true.
+          oneOf:
+            - required:
+                - drill
+              not:
+                required:
+                  - router
+            - required:
+                - router
+              not:
+                required:
+                  - drill
+            - required:
+                - use
+          additionalProperties: false
+required:
+  - size
+additionalProperties: false
