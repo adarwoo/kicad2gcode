@@ -16,38 +16,6 @@ from ruamel.yaml.error import CommentMark
 
 logger = logging.getLogger(__name__)
 
-if not hasattr(CommentedMap, "yaml_set_comment_before_key"):
-    def override_set_comment_before_key(self, key, comment, column=None, clear=False):
-        """
-        append comment to list of comment lines before key, '# ' is inserted
-            before the comment
-        column: determines indentation, if not specified take indentation from
-                previous comment, otherwise defaults to 0
-        clear: if True removes any existing comments instead of appending
-        """
-        key_comment = self.ca.items.setdefault(key, [None, [], None, None])
-        if clear:
-            key_comment[1] = []
-        comment_list = key_comment[1]
-        if comment:
-            comment_start = '# '
-            if comment[-1] == '\n':
-                comment = comment[:-1]  # strip final newline if there
-        else:
-            comment_start = '#'
-        if column is None:
-            if comment_list:
-                 # if there already are other comments get the column from them
-                column = comment_list[-1].start_mark.column
-            else:
-                column = 0
-        start_mark = CommentMark(column)
-        comment_list.append(ruamel.yaml.tokens.CommentToken(
-            comment_start + comment + '\n', start_mark, None))
-        return self
-
-    CommentedMap.yaml_set_comment_before_key = override_set_comment_before_key
-
 
 class YamlConfigManager:
     """
@@ -89,35 +57,29 @@ class YamlConfigManager:
         return retval
 
     @staticmethod
-    def _add_comments(node, schema, add_comment=None, indent=0):
+    def _add_comments(node, schema, indent=0):
         """
         Given the fully formed node, add comments using the schema description
         """
         if 'description' in schema:
-            desc = schema['description']
+            node.yaml_set_start_comment(schema['description'], indent)
 
-            if node and isinstance(node, CommentedMap):
-                node.yaml_set_start_comment(desc, indent)
-
-            if add_comment:
-                print(desc)
-                add_comment(desc)
-
-        if schema.get('type') == 'object':
+        if 'type' in schema and schema['type'] == 'object':
             for prop_name, prop_schema in schema.get('properties', {}).items():
-                # Create a lambda for adding the comment
-                if isinstance(node[prop_name], CommentedMap):
-                    add_comment = lambda before: node.yaml_set_comment_before_after_key(prop_name, None, 0, before, 0)
-                else:
-                    print("XXX", prop_name)
-                    add_comment = lambda before: node.yaml_set_comment_before_key(prop_name, before)
+                if 'description' in prop_schema:
+                    desc = "\n" + prop_schema['description']
+                    node.yaml_set_comment_before_after_key(prop_name, desc, 0)
 
                 if prop_name in node:
-                    __class__._add_comments(node[prop_name], prop_schema, add_comment, indent+2)
+                    if (
+                        isinstance(node[prop_name], CommentedMap) or 
+                        isinstance(node[prop_name], CommentedSeq)
+                    ):
+                        __class__._add_comments(node[prop_name], prop_schema, indent+2)
 
         if 'type' in schema and schema['type'] == 'array':
             if 'items' in schema:
-                __class__._add_comments(node[0], schema['items'], None, indent+2)
+                __class__._add_comments(node[0], schema['items'], indent+2)
 
 
     def load_schema(self):
@@ -157,7 +119,7 @@ class YamlConfigManager:
         # Parse it!
         try:
             with open(self.config_file_path) as stream:
-                retval = ruamel.yaml.round_trip_load(stream)
+                retval = self.yaml.load(stream)
                 jsonschema.validate(retval, self.schema)
 
                 for key, value in retval.items():
@@ -212,7 +174,7 @@ class YamlConfigManager:
 
         try:
             with open(self.config_file_path, 'w') as content_file:
-                ruamel.yaml.round_trip_dump(self.content, content_file, Dumper=ruamel.yaml.RoundTripDumper)
+                self.yaml.dump(self.content, content_file)
         except Exception as exception:
             logger.error("Failed to create a default configuration file '%s'", self.config_file_path)
             logger.error("Got: %s", exception)
@@ -230,12 +192,14 @@ class YamlConfigManager:
         """
         from os.path import expanduser
         from constants import CONFIG_USER_PATH
+        from ruamel.yaml import YAML
 
         self.section_name = section_name
         self.config_file_path = Path(
             expanduser(CONFIG_USER_PATH) / Path(section_name + ".yaml")
         )
 
+        self.yaml = YAML()
         self.schema, self.validator = self.load_schema()
         self.content = self.load_content()
 
