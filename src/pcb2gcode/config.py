@@ -12,9 +12,17 @@ from pathlib import Path
 
 import ruamel.yaml
 from ruamel.yaml.comments import CommentedMap, CommentedSeq
-from ruamel.yaml.error import CommentMark
+
+import units
+
+import re
+
+from bunch import bunchify
 
 logger = logging.getLogger(__name__)
+
+# Define a regex pattern
+RE_SPLIT_UNIT = re.compile(r'(?P<unit>\w+)(\((?P<defaults_to>\w+)\))?')
 
 
 class YamlConfigManager:
@@ -67,8 +75,11 @@ class YamlConfigManager:
         if 'type' in schema and schema['type'] == 'object':
             for prop_name, prop_schema in schema.get('properties', {}).items():
                 if 'description' in prop_schema:
-                    desc = "\n" + prop_schema['description']
-                    node.yaml_set_comment_before_after_key(prop_name, desc, 0)
+                    desc = prop_schema['description']
+                    if indent==0:
+                        desc = "\n" + desc
+
+                    node.yaml_set_comment_before_after_key(prop_name, desc, indent)
 
                 if prop_name in node:
                     if (
@@ -81,6 +92,48 @@ class YamlConfigManager:
             if 'items' in schema:
                 __class__._add_comments(node[0], schema['items'], indent+2)
 
+
+    @staticmethod
+    def convert_values_to_units(node, schema):
+        """
+        Look for scalar values with a unit, and override the scalar using a Quantity
+        If the unit has as '/x', make x the default unit
+        """
+        if 'type' in schema and schema['type'] == 'object':
+            for prop_name, prop_schema in schema.get('properties', {}).items():
+                if prop_name in node:
+                    if (
+                        isinstance(node[prop_name], CommentedMap) or 
+                        isinstance(node[prop_name], CommentedSeq)
+                    ):
+                        __class__.convert_values_to_units(node[prop_name], prop_schema)
+                    else: # Scalar
+                        if 'unit' in prop_schema:
+                            match = RE_SPLIT_UNIT.match(prop_schema['unit'])
+                            assert(match)
+                            unit_cls = units.Unit.get_type(match.group("unit"))
+                            defaults_to = match.group("defaults_to") or ""
+                            # Override the value using a Quantity
+                            node[prop_name] = unit_cls.from_string(
+                                str(node[prop_name]), defaults_to)
+
+        if 'type' in schema and schema['type'] == 'array':
+            if 'items' in schema:
+                for i, single in enumerate(node):
+                    if (
+                        isinstance(single, CommentedMap) or 
+                        isinstance(single, CommentedSeq)
+                    ):
+                        __class__.convert_values_to_units(single, schema['items'])
+                    else: # Scalar
+                        if 'unit' in schema:
+                            match = RE_SPLIT_UNIT.match(schema['unit'])
+                            assert(match)
+                            unit_cls = units.Unit.get_type(match.group("unit"))
+                            defaults_to = match.group("defaults_to") or ""
+                            # Override the value using a Quantity
+                            node[i] = unit_cls.from_string(
+                                str(single), defaults_to)
 
     def load_schema(self):
         import sys
@@ -122,15 +175,12 @@ class YamlConfigManager:
                 retval = self.yaml.load(stream)
                 jsonschema.validate(retval, self.schema)
 
-                for key, value in retval.items():
-                    pass
-
             return retval
         except OSError:
             logger.error("File '%s' could not be opened!", self.config_file_path)
         except ruamel.yaml.YAMLError as exception:
             logger.error("File '%s' is not a valid Yaml document!", self.config_file_path)
-            logger.error(e)
+            logger.error(exception)
         except jsonschema.ValidationError as exc:
             logger.error("File '%s' is not structured correctly!", self.config_file_path)
             logger.info("Details:\n%s", exc)
@@ -142,8 +192,9 @@ class YamlConfigManager:
         newname = self.config_file_path.with_suffix(".yaml.old")
 
         try:
-            self.config_file_path.replace(newname)
+            retval = {}
             logger.warning("Renaming the file %s", newname)
+            self.config_file_path.replace(newname)
         except Exception as exception:
             logger.error("Failed to rename the file '%s' to '%s'", self.config_file_path, newname)
             logger.error("Got: %s", exception)
@@ -162,8 +213,11 @@ class YamlConfigManager:
         # Make sure the directory exists
         config_dir = self.config_file_path.parent
 
+        logger.info("Creating a default content %s", self.config_file_path)
+
         if not config_dir.exists():
             try:
+                logger.info("Creating the directory %s", config_dir)
                 config_dir.mkdir(0o0755, True, True)
             except Exception as exception:
                 logger.error("Failed to create the directory '%s'", config_dir)
@@ -207,6 +261,8 @@ class YamlConfigManager:
             self.content = self.generate_default_content()
             self.write_content()
 
+        self.convert_values_to_units(self.content, self.schema)
+
     def get_content(self):
         return self.content
 
@@ -222,8 +278,9 @@ class Config:
             if '_' in section:
                 section = ''.join([word[0] for word in section.split('_')])
 
-            # Add to the config object
-            setattr(self, section, yaml_config.get_content())
+            # Add to the config object as a flat structure
+            bunch = bunchify(yaml_config.get_content())
+            setattr(self, section, bunch)
 
 if __name__ == "__main__":
     import logging

@@ -15,7 +15,7 @@ properties:
 
     properties:
       fields:
-        const: ["diameter", "speed", "z_feed"]
+        const: ["diameter", ["speed", "z_feed"]]
         description: "Name of the fields - do not change"
 
       units:
@@ -27,12 +27,14 @@ properties:
           Z feed may use "m/min", "mm/min", "in/mm" or "ipm"
         items:
           - enum: ["mm", "in", "inch", "mil", "thou"]
-          - const: "rpm"
-          - enum: ["m/min", "mm/min", "in/mm", "ipm"]
-        minItems: 3
-        maxItems: 3          
+          - type: array
+            items:
+              - const: "rpm"
+              - enum: ["m/min", "mm/min", "in/mm", "ipm"]
+        minItems: 2
+        maxItems: 2          
         default:
-          ["mm", "rpm", "mm/min"]
+          ["mm", ["rpm", "mm/min"]]
 
       data:
         type: object
@@ -125,7 +127,7 @@ properties:
 
     properties:
       fields:
-        const: ["diameter", "speed", "table_feed", "z_feed", "exit_depth"]
+        const: ["diameter", ["speed", "table_feed", "z_feed", "exit_depth"]]
         description: "Name of the fields (do not change)"
 
       units:
@@ -137,12 +139,14 @@ properties:
         type: array
         items:
           - enum: ["mm", "in", "inch", "mil", "thou"]
-          - const: "rpm"
-          - enum: ["m/min", "mm/min", "in/mm", "ipm"]
-          - enum: ["m/min", "mm/min", "in/mm", "ipm"]
-          - enum: ["mm", "in", "inch", "mil", "thou"]
+          - type: array
+            items:
+              - const: "rpm"
+              - enum: ["m/min", "mm/min", "in/mm", "ipm"]
+              - enum: ["m/min", "mm/min", "in/mm", "ipm"]
+              - enum: ["mm", "in", "inch", "mil", "thou"]
         default:
-          ["mm", "rpm", "mm/min", "mm/min", "mm"]
+          ["mm", ["rpm", "m/min", "m/min", "mm"]]
 
       data:
         description: |
@@ -158,7 +162,7 @@ properties:
             - type: number
             - type: number          
         minItems: 4
-        maxItems: 4          
+        maxItems: 4
         default:
           0.8  : [60000, 0.4,  0.1, 0.75]
           0.9  : [53000, 0.6,  0.1, 0.75]
