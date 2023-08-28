@@ -4,12 +4,13 @@ description: Specify what you have in stock
 properties:
 
   drillbits:
-    type: array
     description: |
       Available drillbit sizes. Numbers are taken as mm. Use a string to add
       a unit from mm, cm, in, thou and mil.
       Simple fractions can be used such as 3/64in.
-
+    type: array
+    # The optional value in () is the default unit
+    unit: length(mm)
     default:
       - 0.3
       - 0.35
@@ -78,8 +79,9 @@ properties:
           pattern: "^(?:\\d+(?:\\.\\d+)?|\\d+\\/\\d+)(?:mm|in|mil|thou|inch|cm)$"
 
   routerbits:
-    type: array
     description: Standard routerbit sizes. See drillbits.
+    type: array
+    unit: length(mm)
     default:
       - 0.8
       - 0.9

@@ -2,18 +2,6 @@ from typing import List, Tuple, Dict
 
 import bisect
 
-from settings import *
-
-
-
-REAL = lambda n: n.imag if n.imag else n
-DIA_TO_STR = lambda n: f"R{TO_MM(n.imag)}" if n.imag else f"{TO_MM(n)}"
-
-
-# Lookup and interpolate a value from a
-INTERPOLATE_LUT_AT = lambda value, table, pos, scale=1: (
-    interpolate_lookup(table, value)[pos]*scale)
-
 
 class Coordinate:
     def __init__(self, x: int, y: int):
@@ -21,59 +9,9 @@ class Coordinate:
         self.y = y
 
 
-def find_nearest_drillbit_size(n, sizes=None, allow_bigger=True):
-    """
-    Find from the standard size, the nearest bit.
-    Grab the neareast smaller and nearest larger and check within acceptable
-    margin. The smallest difference wins.
-    The units of n and sizes must be the same.
-
-    @param n The diameter to drill. If the value is complex, it is a router
-    @param sizes An array of sizes to choose from
-    @param allow_bigger If True (default), allow a bit to be bigger than the hole
-           If the bit is used to drill a pre-hole prior to routing, the bit should
-           not be bigger and this should then be false
-
-    @return The best matching bit size or None
-    """
-    # Use the default size
-    if not sizes:
-        sizes = ROUTERBIT_SIZES if n.imag else DRILLBIT_SIZES
-
-    # Do not mix drill and router bits
-    filtered_sizes = [hole for hole in sizes if hole.imag == n.imag]
-
-    # Find the nearest number using the min function with a custom key function
-    standard_sizes = sorted([s for s in sizes if isinstance(s, int)])
-    min_so_far = n
-    retval = None
-    lower = lambda n: n - n*MAX_DOWNSIZING_PERCENT/100
-    upper = lambda n: n + n*MAX_OVERSIZING_PERCENT/100
-
-    # Start with the largest bit - rational : A bigger hole will accomodate the part
-    # In most cases, the plating (0.035 nominal) will make the hole smaller in the end
-    for s in reversed(filtered_sizes):
-        # Skip too large of a hole
-        if allow_bigger:
-            if s > upper(n):
-                continue
-        elif s > n:
-            continue
-
-        # Stop if too small - won't get better!
-        if s < lower(n):
-            break
-
-        # Whole size is ok, promote if difference is less
-        if abs(n-s) < min_so_far:
-            min_so_far = abs(n-s)
-
-            if min_so_far == 0:
-                return s
-
-            retval = s
-
-    return retval
+def round_significant(number, significant_digits=4):
+    rounded = float("{:.{}g}".format(number, significant_digits))
+    return int(rounded) if rounded.is_integer() else rounded
 
 
 def interpolate_lookup(table, value):
@@ -101,7 +39,7 @@ def interpolate_lookup(table, value):
     lower_percentage = (upper_diameter - value) / (upper_diameter - lower_diameter)
     upper_percentage = 1 - lower_percentage
 
-    interpolated_values = tuple(int(l * lower_percentage + u * upper_percentage)
+    interpolated_values = tuple(l * lower_percentage + u * upper_percentage
                                 for l, u in zip(lower_values, upper_values))
 
     return interpolated_values
