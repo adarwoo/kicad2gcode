@@ -7,17 +7,19 @@
 import jsonschema
 import logging
 
-from constants import CONFIG_USER_PATH
+from .constants import CONFIG_USER_PATH, CONFIG_SECTIONS, \
+    SCHEMA_FILE__FILENAME_SUFFIX, SCHEMA_PATH
+
 from pathlib import Path
 
 import ruamel.yaml
 from ruamel.yaml.comments import CommentedMap, CommentedSeq
 
-import units
+from .units import Unit
 
 import re
 
-from bunch import bunchify
+from .bunch import bunchify
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +85,7 @@ class YamlConfigManager:
 
                 if prop_name in node:
                     if (
-                        isinstance(node[prop_name], CommentedMap) or 
+                        isinstance(node[prop_name], CommentedMap) or
                         isinstance(node[prop_name], CommentedSeq)
                     ):
                         __class__._add_comments(node[prop_name], prop_schema, indent+2)
@@ -103,7 +105,7 @@ class YamlConfigManager:
             for prop_name, prop_schema in schema.get('properties', {}).items():
                 if prop_name in node:
                     if (
-                        isinstance(node[prop_name], CommentedMap) or 
+                        isinstance(node[prop_name], CommentedMap) or
                         isinstance(node[prop_name], CommentedSeq)
                     ):
                         __class__.convert_values_to_units(node[prop_name], prop_schema)
@@ -111,7 +113,7 @@ class YamlConfigManager:
                         if 'unit' in prop_schema:
                             match = RE_SPLIT_UNIT.match(prop_schema['unit'])
                             assert(match)
-                            unit_cls = units.Unit.get_type(match.group("unit"))
+                            unit_cls = Unit.get_type(match.group("unit"))
                             defaults_to = match.group("defaults_to") or ""
                             # Override the value using a Quantity
                             node[prop_name] = unit_cls.from_string(
@@ -121,7 +123,7 @@ class YamlConfigManager:
             if 'items' in schema:
                 for i, single in enumerate(node):
                     if (
-                        isinstance(single, CommentedMap) or 
+                        isinstance(single, CommentedMap) or
                         isinstance(single, CommentedSeq)
                     ):
                         __class__.convert_values_to_units(single, schema['items'])
@@ -129,7 +131,7 @@ class YamlConfigManager:
                         if 'unit' in schema:
                             match = RE_SPLIT_UNIT.match(schema['unit'])
                             assert(match)
-                            unit_cls = units.Unit.get_type(match.group("unit"))
+                            unit_cls = Unit.get_type(match.group("unit"))
                             defaults_to = match.group("defaults_to") or ""
                             # Override the value using a Quantity
                             node[i] = unit_cls.from_string(
@@ -138,7 +140,6 @@ class YamlConfigManager:
     def load_schema(self):
         import sys
         from importlib import resources
-        from constants import SCHEMA_FILE__FILENAME_SUFFIX, SCHEMA_PATH
 
         self.schema_file_path = SCHEMA_PATH / Path(self.section_name + SCHEMA_FILE__FILENAME_SUFFIX)
 
@@ -245,7 +246,6 @@ class YamlConfigManager:
         @param section_name The name of section of configuration to handle such as 'racks'
         """
         from os.path import expanduser
-        from constants import CONFIG_USER_PATH
         from ruamel.yaml import YAML
 
         self.section_name = section_name
@@ -269,8 +269,6 @@ class YamlConfigManager:
 
 class Config:
     def __init__(self) -> None:
-        from constants import CONFIG_SECTIONS
-
         for section in CONFIG_SECTIONS:
             yaml_config = YamlConfigManager(section)
 
