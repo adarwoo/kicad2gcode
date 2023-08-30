@@ -24,7 +24,7 @@ jobs:
         run: poetry install
 
       - name: Test with python
-        run: poetry run src/pcb2gcode/units.py
+        run: poetry run src/pcbgcode/units.py
 
       - name: Test with pytest
         run: poetry run pytest tests/
