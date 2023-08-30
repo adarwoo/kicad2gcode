@@ -27,6 +27,6 @@ jobs:
         run: poetry run pytest tests/ --cov=pcb2gcode --cov-branch
 
       - name: Use Codecov to track coverage
-        uses: codecov/codecov-action@v2
+        uses: codecov/codecov-action@v3
         with:
           files: ./coverage.xml # coverage report
