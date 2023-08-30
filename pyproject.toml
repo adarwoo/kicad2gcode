@@ -1,11 +1,11 @@
 [tool.poetry]
-name = "pcbgcode"
+name = "pcb2gcode"
 version = "0.1"
 description = "A tool to convert KiCad PCB file to a CNC GCode"
 authors = ["Guillaume ARRECKX <software@arreckx.com>"]
 license = "GNU General Public License v3.0"
 readme = "README.md"
-packages = [{include = "src/pcbgcode"}]
+packages = [{include = "src/pcb2gcode"}]
 
 [tool.poetry.dependencies]
 python = "^3.9"
