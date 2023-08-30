@@ -21,7 +21,7 @@ jobs:
         uses: snok/install-poetry@v1
 
       - name: Install package
-        run: poetry install --with docs
+        run: poetry install
 
       - name: Test with pytest
         run: poetry run pytest tests/ --cov=pcb2gcode --cov-branch
