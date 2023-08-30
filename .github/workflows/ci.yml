@@ -21,15 +21,12 @@ jobs:
         uses: snok/install-poetry@v1
 
       - name: Install package
-        run: poetry install
+        run: poetry install --with docs
 
       - name: Test with pytest
-        run: poetry run pytest tests/
+        run: poetry run pytest tests/ --cov=pcb2gcode --cov-branch
 
       - name: Use Codecov to track coverage
         uses: codecov/codecov-action@v2
         with:
           files: ./coverage.xml # coverage report
-
-      - name: Build documentation
-        run: poetry run make html --directory docs/
