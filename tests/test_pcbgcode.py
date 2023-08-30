@@ -1,4 +1,4 @@
-from pcbgcode.config import config
+from pcb2gcode.config import config
 
 import sys
 print(sys.path)
