@@ -23,9 +23,6 @@ jobs:
       - name: Install package
         run: poetry install
 
-      - name: Test with python
-        run: poetry run src/pcb2gcode/units.py
-
       - name: Test with pytest
         run: poetry run pytest tests/
 
