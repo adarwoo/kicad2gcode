@@ -1,5 +1,13 @@
 #!/usr/bin/python3
 import re
+from .utils import round_significant
+
+# TODO -> such a libary implicitly doing loss of precision is ***@!
+# Pb: The rounding error could impact (to test) finding the bit
+def fround(f):
+    # Round to 14 digits to prevent float rounding errors during conversion
+    return round_significant(f, 14)
+
 
 RE_NUMBER = re.compile(
     r'^\s*(?P<number>'
@@ -22,6 +30,17 @@ class Quantity:
     Represents the quantity of a given unit
     """
     def __init__(self, value, base_unit):
+        """
+        Construct the quantity from:
+            - a string of ints, floats and fractions
+            - a integer or a float
+            - a quantity
+            and a unit
+        Try to keep the number as integer
+        """
+        # A string representing the value passed in. A fraction would be stored as a fraction
+        self._raw = None
+
         if isinstance(value, str):
             m = RE_NUMBER.match(value)
             n = m.group("numerator")
@@ -48,18 +67,13 @@ class Quantity:
         if target_unit is None:
             return self._value
         else:
-            # TODO -> such a libary implicitly doing loss of precision is ***@!
-            # Pb: The rounding error could impact (to test) finding the bit
-            # Also - why 14 digits?
-            from .utils import round_significant
-
             retval = self._value * self.base_unit.conversion_to(target_unit)
 
             if int(retval) == retval:
                 return int(retval)
 
             # Loose some precision to avoid rounding errors
-            return round_significant(retval, 14)
+            return fround(retval)
 
     @property
     def value(self):
@@ -103,7 +117,7 @@ class Quantity:
             return self.value == other
         elif isinstance(other, Quantity):
             converted_other = other(self.base_unit)
-            return self.value == converted_other
+            return fround(self.value) == converted_other
         else:
             raise TypeError("Unsupported comparison type")
 
@@ -245,9 +259,9 @@ _in = Length("in", 25400)
 mm_min = FeedRate("mm/min", 1)
 cm_min = FeedRate("cm/min", 10)
 m_min = FeedRate("m/min", 100)
-in_min = FeedRate("in/min", 1)
-ipm = FeedRate("ipm", 1)
-inch_min = FeedRate("inou/min", 1)
+in_min = FeedRate("in/min", 25.4)
+ipm = FeedRate("ipm", 25.4)
+inch_min = FeedRate("inch/min", 25.4)
 
 # Define angles
 deg = Angle("deg", 1)
