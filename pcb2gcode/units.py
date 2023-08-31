@@ -41,6 +41,7 @@ class Quantity:
             self._value = value
             self._raw = str(value)
 
+        # Bares the Unit type
         self.base_unit = base_unit
 
     def __call__(self, target_unit=None):
@@ -50,8 +51,8 @@ class Quantity:
             # TODO -> such a libary implicitly doing loss of precision is ***@!
             # Pb: The rounding error could impact (to test) finding the bit
             # Also - why 14 digits?
-            from utils import round_significant
-            
+            from .utils import round_significant
+
             retval = self._value * self.base_unit.conversion_to(target_unit)
 
             if int(retval) == retval:
@@ -59,34 +60,34 @@ class Quantity:
 
             # Loose some precision to avoid rounding errors
             return round_significant(retval, 14)
-        
+
     @property
     def value(self):
         return self._value
-    
+
     @property
     def base(self):
         """
         Return the base unit value
-        The internal value is mutliplied by the convertion factor 
+        The internal value is mutliplied by the convertion factor
         """
         return self._value * self.base_unit.conversion_factor
 
     @property
     def unit(self):
         return self.base_unit
-    
+
     def __mul__(self, other):
         if isinstance(other, (int, float, complex)):
             return Quantity(self.value * other, self.base_unit)
         elif isinstance(other, list):
             return [item * self for item in other]
         else:
-            raise TypeError("Unsupported multiplication type")    
+            raise TypeError("Unsupported multiplication type")
 
     def __rmul__(self, other):
         return self.__mul__(other)
-    
+
     def __add__(self, other):
         if isinstance(other, Quantity):
             other_value = other(self.base_unit)
@@ -102,7 +103,7 @@ class Quantity:
             return self.value == other
         elif isinstance(other, Quantity):
             converted_other = other(self.base_unit)
-            return self.value == converted_other            
+            return self.value == converted_other
         else:
             raise TypeError("Unsupported comparison type")
 
@@ -118,7 +119,6 @@ class Unit:
     Represents the unit used by the Quantity
     """
     __types__ = {}
-
     __units__ = {}
     __type__ = None
     __default__ = None
@@ -130,14 +130,31 @@ class Unit:
 
     def __call__(self, value=None):
         return Quantity(value, self)
-    
+
+    @classmethod
+    @property
+    def type(cls):
+        """
+        @return The type (as a class of this unit)
+        """
+        return cls.__types__[cls.__type__]
+
     @staticmethod
     def get_type(type_str):
+        """
+        Get the unit type (base class) from a type string description
+
+        @param type_str The type string
+        @returns The type from the unit str. So 'mm' will return Length etc.
+        """
         return __class__.__types__[type_str]
-    
+
     @staticmethod
     def get_unit(unit_str):
-        """ Return the Unit Object from the string """
+        """
+        Factory method to get a Unit object from a string
+        @returns The unit object
+        """
         return __class__.__units__[unit_str]
 
     def conversion_to(self, other_unit):
@@ -157,12 +174,12 @@ class Unit:
         elif isinstance(other, list):
             return [Quantity(item, self) for item in other]
         else:
-            raise TypeError("Unsupported multiplication type")    
-        
+            raise TypeError("Unsupported multiplication type")
+
     @classmethod
     def from_string(cls, value, default_unit=None):
-        # All numbers are as n/d 
-        # Scan the units and try 
+        # All numbers are as n/d
+        # Scan the units and try
         unit_type = cls.__type__
         assert(unit_type is not None)
         match = RE_NUMBER.match(value)
@@ -182,7 +199,7 @@ class Unit:
         assert(unit in cls.__units__)
 
         return Quantity(match.group("number"), cls.__units__[unit])
-    
+
     @classmethod
     def from_scalar(cls, value):
         assert(cls.__type__ is not None)
@@ -191,7 +208,7 @@ class Unit:
         return Quantity(value, cls.__units__[unit])
 
 
-def register_unit(name):
+def register_unit_type(name):
     """ Decorator to register unit types """
     def decorator(cls):
         Unit.__types__[name] = cls
@@ -199,19 +216,19 @@ def register_unit(name):
         return cls
     return decorator
 
-@register_unit("length")
+@register_unit_type("length")
 class Length(Unit):
     __default__ = "mm"
 
-@register_unit("feedrate")
+@register_unit_type("feedrate")
 class FeedRate(Unit):
     __default__ = "mm/min"
 
-@register_unit("angle")
+@register_unit_type("angle")
 class Angle(Unit):
     __default__ = "degree"
 
-@register_unit("rpm")
+@register_unit_type("rpm")
 class Rpm(Unit):
     __default__ = "rpm"
 
@@ -238,52 +255,3 @@ degree = Angle("degree", 1)
 
 # Define rotational speed units
 rpm = Rpm("rpm", 1)
-
-
-if __name__ == "__main__":
-    aa = mm(5)
-    print(aa)
-    a = 4 * mm
-    print(a())  # Output: 4
-    print(a(mil))  # Output: 1016
-    print(a(um))  # Output: 4000
-    c = a + 3000*um
-    print(c)  # Output: 7 mm
-
-    # Test qte
-    a = cm(10)
-    b = mm(a)
-    print(b) # Expect 100mm
-
-    # Example
-    a = 4 * mm
-    b = [3, 4, 6] * mm
-    print(a)  # Output: 4 mm
-    print(b)  # Output: [3 mm, 4 mm, 6 mm]
-
-    k = set([2,3,25.4]*mm)
-    assert( inch(1) in k )
-
-    l = Length.from_string("4cm")
-    print(l)
-    l = Length.from_string("4/3mm")
-    print(l)
-    l = Length.from_string("8/9 in")
-    print(l)
-
-    f = FeedRate.from_string("233mm/min")
-    print(f)
-    f = FeedRate.from_string("50ipm")
-    print(f(mm_min))
-    print(mm_min(f))
-
-    k = Unit.get_type("length").from_string("34.5mm")
-    print(k)
-
-    # Test norm
-    n = 12 * mm
-    print(n.base)
-
-    r = um(700.0)
-    r = mm(r)
-    print(r)
