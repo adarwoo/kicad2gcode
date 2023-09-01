@@ -7,27 +7,15 @@
 
 # Complex number are used where real part is a drill bit and the imaginary a router
 
-from pathlib import Path
 from typing import Self
-from math import tan, radians
+
 from collections import OrderedDict
 from .config import global_config as gc
-from utils import *
+from .cutting_tools import CuttingTool, DrillBit, RouterBit
 
 import logging
 import os
 
-
-
-# Multiple the diameter by this number to find the length of the tip of the bit
-HEIGHT_TO_DIA_RATIO = tan(radians((180-gc.drillbit_point_angle())/2))
-
-# Compute the largest drillbit size where there is enough clearance in the backing board for
-#  the point to exit cleanly
-MAX_DRILLBIT_DIAMETER_FOR_CLEAN_EXIT = \
-    int(gc.backboard_thickness - gc.safe_distance - gc.exit_depth_min) / HEIGHT_TO_DIA_RATI
-
-# TODO -> Could be negative. So check first
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +32,7 @@ class Rack:
         @param size The initial size of the rack. If size is 0, the rack is not
                     size bound.
         """
-        self.rack = [None] * size
+        self.rack = [None] * size # Else contains CuttingTools
         self.size = size
 
     def __getitem__(self, key):
@@ -81,21 +69,11 @@ class Rack:
         return list(range(1, len(self.rack) + 1))
 
     def get_tool(self, slot):
-        """ @return The tool diameter in the given T slot or None """
+        """ @return The tool in the given T slot or None """
         if slot < 1 or slot > len(self.rack):
             return None
 
         return self.rack[slot-1]
-
-    def find_nearest_drillbit_size(self, dia):
-        """
-        Request a diameter from the rack.
-        If a suitable bit already exists (or a matching diameter), return the tool number
-
-        @param The diameter as a float(mm) or int(um)
-        @returns The tool number of None
-        """
-        return find_nearest_drillbit_size(dia, self.keys())
 
     def add_bit(self, bit, position=None):
         """
@@ -125,53 +103,6 @@ class Rack:
 
         self.rack[position - 1] = bit
 
-    def request(self, diameter):
-        """
-        Requests a drill bit from the rack from the standard size
-        Try to reuse an existing bit, otherwise, add a new one
-        from the standard sizes.
-        """
-        retval = self.find_nearest_drillbit_size(diameter)
-
-        if not retval:
-            # Get a standard size bit
-            retval = find_nearest_drillbit_size(diameter)
-
-            # Make sure the bit geometry is compatible with the backing board thickness
-            if retval and retval > MAX_DRILLBIT_DIAMETER_FOR_CLEAN_EXIT:
-                # If not found or too deep - the hole must be routed
-                # - but let's drill the largest hole first
-                # But to do so - since the router dia can be any smaller size
-                # - we need to wait for the drill rack to be completed
-                exit_depth_required = HEIGHT_TO_DIA_RATIO * TO_MM(retval) + MIN_EXIT_DEPTH
-
-                self.warn(
-                    f"Exit depth required {exit_depth_required}mm",
-                    f"is greater than the depth allowed {MAX_DEPTH_INTO_BACKBOARD}mm"
-                    "Switching to routing"
-                )
-
-                retval = None
-
-            # Must be routed - use the contour bit if ok
-            if not retval:
-                if diameter > max(DRILLBIT_SIZES):
-                    if diameter <= CONTOUR_ROUTER_DIAMETER_MM:
-                        self.add( 1j * CONTOUR_ROUTER_DIAMETER_MM )
-                    else:
-                        logger.error(
-                            f"No suitable tool to route oblong holes of diameter "
-                            "{TO_MM(diameter)}mm"
-                        )
-                else:
-                    logger.error(
-                        f"No suitable tool found to route oblong holes of diameter "
-                        "{TO_MM(diameter)}mm"
-                    )
-            else:
-                self.add(retval)
-
-        return retval
 
     def merge(self, rack: Self):
         """
@@ -272,11 +203,9 @@ class RackManager:
     """
     Object which manages the racks of the CNC.
     If the CNC has automated tool change, this is very important to
-    allow the operator from reusing existing racks and speed operations.
+    allow the operator reusing existing racks.
     Depending on the CNC, the racks could be loadable, so each Job could
     have its own rack.
-    A file (path defined in the settings) is used to create the rack
-    configuration.
     The machining code can also create a new rack from scratch, and it
     can be saved.
     Finally for the less fortunate, the rack 'manual', is used to manually
@@ -292,8 +221,8 @@ class RackManager:
 
         selection = rack.use
 
-
     def save(self, RACK_FILE):
+        # TODO
         pass
 
     def get_rack(self):

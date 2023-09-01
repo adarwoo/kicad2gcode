@@ -2,6 +2,8 @@
 
 # Cutting tools for the CNC
 from enum import IntEnum
+from logging import getLogger
+from math import tan, radians
 
 from .config import global_settings as gs
 from .config import machining_data as md
@@ -9,6 +11,17 @@ from .config import stock
 
 from .utils import interpolate_lookup, round_significant
 from .units import rpm, FeedRate, Unit, um
+
+
+logger = getLogger(__name__)
+
+# Multiple the diameter by this number to find the length of the tip of the bit
+HEIGHT_TO_DIA_RATIO = tan(radians((180-gs.drillbit_point_angle())/2))
+
+# Compute the largest drillbit size where there is enough clearance in the backing board for
+#  the point to exit cleanly
+MAX_DRILLBIT_DIAMETER_FOR_CLEAN_EXIT = \
+    (gs.backboard_thickness - gs.safe_distance - gs.exit_depth_min) / HEIGHT_TO_DIA_RATIO
 
 
 class CutDir(IntEnum):
@@ -20,6 +33,7 @@ class CutDir(IntEnum):
 
 class CuttingTool:
     __stock__ = []
+    allow_bigger = False
 
     def __init__(self, diameter, mfg_data):
         self.type = self.__class__
@@ -29,6 +43,8 @@ class CuttingTool:
         self.cut_direction = CutDir.UNKWOWN
         self.rpm = rpm(0)
         self.z_feedrate = FeedRate.from_scalar(0)
+        # If True, allow for larger sizes. OK for a drillbit, but not for a routerbit
+        self.allow_bigger=False
 
         # Grab a set of interpolated data
         key_unit = Unit.get_unit(self.mfg_data.units[0])
@@ -42,7 +58,7 @@ class CuttingTool:
         return unit(round_significant(self.interpolated_data[index]))
 
     @classmethod
-    def get_from_stock(cls, diameter, allow_bigger=False):
+    def get_from_stock(cls, diameter):
         """
         Grab a stock object which is the closest to the required size
         The selection will involve the configuration
@@ -58,7 +74,7 @@ class CuttingTool:
             upper = v + ((v * gs.oversizing_allowance_percent) / 100)
 
             # Skip too large of a hole
-            if allow_bigger:
+            if cls.allow_bigger:
                 if s > upper:
                     continue
             elif s > v:
@@ -74,12 +90,93 @@ class CuttingTool:
 
                 if min_so_far == 0:
                     nearest_diameter = s
-                    break;
+                    break
 
                 nearest_diameter = s
 
         return cls(nearest_diameter) if nearest_diameter else None
 
+    @classmethod
+    def get_stock_size_range(cls):
+        """
+        @return The min-max range of the stock cutter sizes in Length
+        """
+        stock = sorted(cls.__stock__)
+        return (stock[0], stock[-1])
+
+    def get_nearest_stock_size(self):
+        """
+        Return the nearest stock size item or None
+        """
+        return self.get_from_stock(self.diameter)
+
+    @staticmethod
+    def request(cutting_tool):
+        """
+        Requests a cutting tool from the standard size
+        May return a routerbit for drilling holes if that's the only option
+        """
+        # Normalize the cutting tool size matching sizes from our stock
+        normalized_size_tool = cutting_tool.get_nearest_stock_size()
+
+        def route_holes(cutting_tool = cutting_tool):
+            # Use the contour router if not too big
+            if gs.router_diameter_for_contour <= cutting_tool.diameter:
+                return RouterBit(gs.router_diameter_for_contour)
+
+            # Pick the stock bit
+            normalized_size_tool = RouterBit(cutting_tool.diameter).get_nearest_stock_size()
+
+            if normalized_size_tool:
+                return normalized_size_tool
+
+            # No suitable router bit found - Game over
+            logger.error(f"No suitable routerbit exits in the stock to cut a hole of {cutting_tool.diameter}.")
+
+            return None
+
+        if normalized_size_tool is None:
+            if cutting_tool.diameter < cutting_tool.get_stock_size_range()[0]:
+                # Size is too small and not supported
+                logger.warning(f"Cutting tool size: {cutting_tool.diameter} is too small")
+                return None
+
+            # Else - it is too big
+            if cutting_tool.diameter > cutting_tool.get_stock_size_range()[1]:
+                if cutting_tool.type is RouterBit:
+                    # Size is too large
+                    logger.error(f"Cutting tool size: {cutting_tool.diameter} exceed largest stock bit")
+                    return None
+                else:
+                    logger.info(f"Cutting tool size: {cutting_tool.diameter} exceed largest bit and will be routed")
+                    return route_holes()
+
+            # Else, it is not matched (tolerances and too tight)
+            if cutting_tool.type is RouterBit:
+                logger.error(f"No suitable routerbit found for this size: {cutting_tool.diameter}")
+                logger.info("Consider increasing over and under size tolerances")
+
+            # Try to route it!
+            return route_holes()
+
+        # Make sure the bit geometry is compatible with the backing board thickness
+        if normalized_size_tool.diameter > MAX_DRILLBIT_DIAMETER_FOR_CLEAN_EXIT:
+            # If not found or too deep - the hole must be routed
+            # - but let's drill the largest hole first
+            # But to do so - since the router dia can be any smaller size
+            # - we need to wait for the drill rack to be completed
+            exit_depth_required = \
+                HEIGHT_TO_DIA_RATIO * normalized_size_tool.diameter + gs.exit_depth_min
+
+            self.warn(
+                f"Exit depth required {exit_depth_required}",
+                f"is greater than the depth allowed {gs.exit_depth_min}"
+                "Switching to routing"
+            )
+
+            return route_holes(normalized_size_tool)
+
+        return normalized_size_tool
 
 class DrillBit(CuttingTool):
     __stock__ = stock.drillbits
@@ -87,6 +184,7 @@ class DrillBit(CuttingTool):
     def __init__(self, diameter):
         super().__init__(diameter, md.drillbits)
         self.cut_direction = CutDir.UP
+        self.allow_bigger = True
 
         self.rpm = self.interpolate("speed")
         self.z_feedrate = self.interpolate("z_feed")
