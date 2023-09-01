@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 import re
+from operator import __lt__, __le__, __eq__, __ne__, __ge__, __gt__
 from .utils import round_significant
 
 # TODO -> such a libary implicitly doing loss of precision is ***@!
@@ -99,8 +100,19 @@ class Quantity:
         else:
             raise TypeError("Unsupported multiplication type")
 
+    def __truediv__(self, other):
+        if isinstance(other, (int, float, complex)):
+            return Quantity(self.value / other, self.base_unit)
+        elif isinstance(other, list):
+            return [item / self for item in other]
+        else:
+            raise TypeError("Unsupported division type")
+
     def __rmul__(self, other):
         return self.__mul__(other)
+
+    def __rtruediv__(self, other):
+        return self.__div__(other)
 
     def __add__(self, other):
         if isinstance(other, Quantity):
@@ -109,17 +121,45 @@ class Quantity:
             other_value = other
         return Quantity(self._value + other_value, self.base_unit)
 
+    def __sub__(self, other):
+        if isinstance(other, Quantity):
+            other_value = other(self.base_unit)
+        else:
+            other_value = other
+        return Quantity(self._value - other_value, self.base_unit)
+
+    def __abs__(self):
+        return Quantity(abs(self._value), self.base_unit)
+
     def __repr__(self):
         return f"{self._raw}{self.base_unit.name}"
 
-    def __eq__(self, other):
+    def __apply_operator(self, other, operator):
         if isinstance(other, (int, float)):
-            return self.value == other
+            return operator(self.value, other)
         elif isinstance(other, Quantity):
             converted_other = other(self.base_unit)
-            return fround(self.value) == converted_other
+            return operator(fround(self.value), converted_other)
         else:
-            raise TypeError("Unsupported comparison type")
+            raise TypeError("Unsupported operation type")
+
+    def __lt__(self, other):
+        return self.__apply_operator(other, __lt__)
+
+    def __le__(self, other):
+        return self.__apply_operator(other, __le__)
+
+    def __eq__(self, other):
+        return self.__apply_operator(other, __eq__)
+
+    def __ne__(self, other):
+        return self.__apply_operator(other, __ne__)
+
+    def __ge__(self, other):
+        return self.__apply_operator(other, __ge__)
+
+    def __gt__(self, other):
+        return self.__apply_operator(other, __gt__)
 
     def __hash__(self):
         """

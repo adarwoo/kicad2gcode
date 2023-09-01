@@ -120,8 +120,12 @@ properties:
     description: "Preferred routing bit size for routing the contour of the board"
     unit: length
     anyOf:
-      - type: "number"
+      - type: number
       - *length_string
-    default: "1.6mm"
+    default: 1.6mm
+  backboard_thickness:
+    description: "Thickness of the back/martyr/exit-board"
+    unit: length
+    default: 2.5mm
 
-required: [spindle_speed, z_feedrate, safe_distance, exit_depth_min, drillbit_point_angle, slot_peck_drilling, oversizing_allowance_percent, downsizing_allowance_percent, router_diameter_for_contour]
+required: [spindle_speed, z_feedrate, safe_distance, exit_depth_min, drillbit_point_angle, slot_peck_drilling, oversizing_allowance_percent, downsizing_allowance_percent, router_diameter_for_contour, backboard_thickness]

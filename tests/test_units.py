@@ -158,7 +158,8 @@ def test_factory():
 
    k = Unit.get_type("length").from_string("34.5mm")
 
-   assert k==mm(34.5)
+   retval = (k==mm(34.5))
+   assert retval
 
 def test_multiply():
    from pcb2gcode.units import Unit, mm, um, _in

@@ -11,37 +11,32 @@ from pathlib import Path
 from typing import Self
 from math import tan, radians
 from collections import OrderedDict
-
-from settings import *
+from .config import global_config as gc
 from utils import *
 
-import yaml
-import jsonschema
 import logging
 import os
 
 
-# Constants
-THIS_PATH = Path(__file__).parent
-RACK_SCHEMA_FILE = THIS_PATH / "rack_schema.json"
-TEMPLATE_RACK_FILE = THIS_PATH / "default_rack_template.yaml"
-RACK_FILE = Path(os.path.expanduser(RACK_FILE_PATH))
 
 # Multiple the diameter by this number to find the length of the tip of the bit
-HEIGHT_TO_DIA_RATIO = tan(radians((180-DRILLBIT_POINT_ANGLE)/2))
+HEIGHT_TO_DIA_RATIO = tan(radians((180-gc.drillbit_point_angle())/2))
 
 # Compute the largest drillbit size where there is enough clearance in the backing board for
 #  the point to exit cleanly
 MAX_DRILLBIT_DIAMETER_FOR_CLEAN_EXIT = \
-    int(MAX_DEPTH_INTO_BACKBOARD - MIN_EXIT_DEPTH) / HEIGHT_TO_DIA_RATIO
+    int(gc.backboard_thickness - gc.safe_distance - gc.exit_depth_min) / HEIGHT_TO_DIA_RATI
+
+# TODO -> Could be negative. So check first
 
 logger = logging.getLogger(__name__)
 
 
 class Rack:
     """
-    Defines a rack object which behaves like a map where the key is the diameter,
-    and an array which maps the rack physically and has a size
+    Defines a rack object which behaves like a list of cutting tools and
+    a dict to locate bits.
+    A rack always has a size. If the size is 0, the rack is manual.
     """
     def __init__(self, size=0):
         """
@@ -100,11 +95,13 @@ class Rack:
         @param The diameter as a float(mm) or int(um)
         @returns The tool number of None
         """
-        return find_nearest_drillbit_size(TO_MM(dia), self.keys())
+        return find_nearest_drillbit_size(dia, self.keys())
 
     def add_bit(self, bit, position=None):
         """
         Add the bit to the rack.
+        If the position is None, find the next available position which
+         starts with the first available slot from the right
         """
         if position is None:
             position = self.find_free_position()
@@ -119,9 +116,9 @@ class Rack:
 
         # Chech if the same diameter is not already occupied
         for dia, slot in self.items():
-            if TO_MM(bit) == dia:
+            if bit == dia:
                 logger.warning(
-                    f"Warning: Bit {DIA_TO_STR(dia)}mm in T{position:02} "
+                    f"Warning: Bit {dia} in T{position:02} "
                     "is already present in the rack at T{slot:02}. "
                     "This slot will not be used."
                 )
@@ -141,7 +138,7 @@ class Rack:
             retval = find_nearest_drillbit_size(diameter)
 
             # Make sure the bit geometry is compatible with the backing board thickness
-            if retval and TO_MM(retval) > MAX_DRILLBIT_DIAMETER_FOR_CLEAN_EXIT:
+            if retval and retval > MAX_DRILLBIT_DIAMETER_FOR_CLEAN_EXIT:
                 # If not found or too deep - the hole must be routed
                 # - but let's drill the largest hole first
                 # But to do so - since the router dia can be any smaller size
@@ -286,100 +283,15 @@ class RackManager:
     change the tools, and is considered of size unlimited.
     """
     def __init__(self) -> None:
-        # Contains the parse Yaml
-        rack_data = {}
-
-        # Load the YAML schema
-        try:
-            with open(RACK_SCHEMA_FILE) as schema_file:
-                schema = yaml.safe_load(schema_file)
-                compiled_schema = jsonschema.Draft7Validator(schema)
-        except OSError:
-            logger.error(f"The schema file {RACK_SCHEMA_FILE.absolute()} could not be opened!")
-        except yaml.YAMLError:
-            logger.error(f"The schema file {RACK_SCHEMA_FILE.absolute()} is not a valid Yaml document!")
-            logger.error(e)
-        except jsonschema.ValidationError:
-            logger.error(f"The schema file {RACK_SCHEMA_FILE.absolute()} is invalid!")
-        else:
-            # Load the rack file
-            if RACK_FILE.exists():
-                try:
-                    with open(RACK_FILE) as rack_yaml:
-                        rack_data = yaml.safe_load(rack_yaml)
-
-                    # Perform the validation using the compiled schema
-                    errors = list(compiled_schema.iter_errors(rack_data))
-
-                    if errors:
-                        rack_data = None
-                        for error in errors:
-                            logger.error("Rack validation error:" + error.message)
-                except OSError:
-                    logger.error(f"Failed to open {RACK_FILE.absolute()}. No rack loaded.")
-                except yaml.YAMLError as e:
-                    logger.error(f"The rack file {RACK_FILE.absolute()} is not a valid Yaml document")
-                    logger.error(e)
-                else:
-                    logger.debug(rack_data)
-            else:
-                # If we don't have a rack - create one!
-                if rack_data is None:
-                    logger.info("No suitable rack file found. Creating a new rack file.")
-
-                    from datetime import datetime
-                    formatted_date_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-                    # Load the template file
-                    try:
-                        template_content = TEMPLATE_RACK_FILE.read_text()
-                        RACK_FILE.write_text(template_content.format(datetime=formatted_date_time, schema_file=RACK_SCHEMA_FILE))
-                    except:
-                        logger.error(f"Failed to create {RACK_FILE.absolute}. Check permissions")
+        from .config import rack
 
         # Process the rack_data
-        self.issue = rack_data.get("issue", 0)
-        self.size = rack_data.get("size", 0)
+        self.issue = rack.issue
+        self.size = rack.size
         self.rack = Rack(self.size)
 
-        selection = rack_data.get("use")
-        racks_definition = rack_data.get("racks", {})
+        selection = rack.use
 
-        try:
-            if selection:
-                if selection not in racks_definition:
-                    raise Exception(f"Cannot find the rack named '{selection}' in the 'use' statement.")
-
-                if self.size == 0:
-                    raise Exception(f"You must specify the size of the racks other than 0.")
-
-                for tool_definition in racks_definition[selection]:
-                    number = tool_definition.get("number", None)
-
-                    bit_dia = tool_definition.get("drill", tool_definition.get("router"))
-
-                    # Magic values to avoid stupid value done simply
-                    if CHECK_WITHIN_DIAMETERS_ABSOLUTE_RANGE(bit_dia):
-                        # Check the diameter matches with the declared drill sizes
-                        if "router" in tool_definition:
-                            if bit_dia not in ROUTERBIT_SIZES:
-                                logger.warn(f"T{number} in the rack '{selection}' has a non standard diameter {bit_dia}.")
-
-                            # Make into imaginary number to indicate it is a router
-                            bit_dia *= 1j
-                        elif bit_dia not in DRILLBIT_SIZES:
-                            logger.warn(f"T{number} in the rack '{selection}' has a non standard diameter {bit_dia}.")
-
-                        # The rack will fill the slot by increment if number is None
-                        self.rack.add_bit(bit_dia, number)
-                    else:
-                        raise Exception(f"Bit size {bit_dia} is not supported")
-
-        except Exception as e:
-            logger.error(e)
-            # Reset the rack to manuak
-            logger.warning("Back rack configuration detected. Using manual rack.")
-            self.rack = Rack()
 
     def save(self, RACK_FILE):
         pass

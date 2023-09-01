@@ -94,6 +94,7 @@ def interpolate_points(start: Coordinate, end: Coordinate, spacing):
     num_points = int(distance / spacing)
 
     # Generate the list of intermediate points
-    intermediate_points = [start_point + i * (direction / num_points) for i in range(1, num_points)]
+    intermediate_points = [
+        start_point + i * (direction / num_points) for i in range(1, num_points)]
 
     return intermediate_points

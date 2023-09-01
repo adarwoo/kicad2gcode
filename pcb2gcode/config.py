@@ -6,6 +6,7 @@
 #
 import jsonschema
 import logging
+import sys
 
 from .constants import CONFIG_USER_PATH, CONFIG_SECTIONS, \
     SCHEMA_FILE__FILENAME_SUFFIX, SCHEMA_PATH
@@ -266,24 +267,10 @@ class YamlConfigManager:
     def get_content(self):
         return self.content
 
+# Create new dictionary dynamically in this module
+for section in CONFIG_SECTIONS:
+    yaml_config = YamlConfigManager(section)
 
-class Config:
-    def __init__(self) -> None:
-        for section in CONFIG_SECTIONS:
-            yaml_config = YamlConfigManager(section)
-
-            # Multiword sections should be abreviated. Global settings becomes gs
-            if '_' in section:
-                section = ''.join([word[0] for word in section.split('_')])
-
-            # Add to the config object as a flat structure
-            bunch = bunchify(yaml_config.get_content())
-            setattr(self, section, bunch)
-
-if __name__ == "__main__":
-    import logging
-    import sys
-    logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
-
-# Create a unique config instance
-config = Config()
+    # Add to the config object as a flat structure
+    bunch = bunchify(yaml_config.get_content())
+    setattr(sys.modules[__name__], section, bunch)
