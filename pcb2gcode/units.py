@@ -139,7 +139,7 @@ class Quantity:
             return operator(self.value, other)
         elif isinstance(other, Quantity):
             converted_other = other(self.base_unit)
-            return operator(fround(self.value), converted_other)
+            return operator(fround(self.value), fround(converted_other))
         else:
             raise TypeError("Unsupported operation type")
 
