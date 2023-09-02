@@ -10,7 +10,7 @@ from .config import machining_data as md
 from .config import stock
 
 from .utils import interpolate_lookup, round_significant
-from .units import rpm, FeedRate, Unit, um
+from .units import rpm, FeedRate, Unit, Length
 
 
 logger = getLogger(__name__)
@@ -35,7 +35,7 @@ class CuttingTool:
     __stock__ = []
     allow_bigger = False
 
-    def __init__(self, diameter, mfg_data):
+    def __init__(self, diameter: Length, mfg_data):
         self.type = self.__class__
         self.diameter = diameter
         self.mfg_data = mfg_data
@@ -178,6 +178,13 @@ class CuttingTool:
 
         return normalized_size_tool
 
+    def __hash__(self) -> int:
+        return self.diameter.__hash__()
+
+    def __eq__(self, other):
+        return self.type is other.type and self.diameter == other.diameter
+
+
 class DrillBit(CuttingTool):
     __stock__ = stock.drillbits
 
@@ -207,3 +214,7 @@ class RouterBit(CuttingTool):
 
     def __repr__(self) -> str:
         return f"{self.diameter} {self.rpm} zfeed:{self.z_feedrate} feed:{self.table_feed}"
+
+    def __hash__(self) -> int:
+        # Negate for router bits
+        return -abs(super().__hash__())

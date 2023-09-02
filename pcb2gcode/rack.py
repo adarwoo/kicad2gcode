@@ -10,8 +10,9 @@
 from typing import Self
 
 from collections import OrderedDict
-from .config import global_config as gc
-from .cutting_tools import CuttingTool, DrillBit, RouterBit
+from .config import global_settings as gs
+
+from .cutting_tools import DrillBit
 
 import logging
 import os
@@ -24,7 +25,8 @@ class Rack:
     """
     Defines a rack object which behaves like a list of cutting tools and
     a dict to locate bits.
-    A rack always has a size. If the size is 0, the rack is manual.
+    A rack always has a size. If the size is 0, the rack is manual adn can grow
+    without limits
     """
     def __init__(self, size=0):
         """
@@ -34,6 +36,7 @@ class Rack:
         """
         self.rack = [None] * size # Else contains CuttingTools
         self.size = size
+        self.invalid_slot = {}
 
     def __getitem__(self, key):
         return self.rack[key - 1]
@@ -45,7 +48,7 @@ class Rack:
         del self.rack[key - 1]
 
     def __contains__(self, key):
-        return key in self.keys()
+        return key in self.rack
 
     def __len__(self):
         return len(self.rack)
@@ -75,34 +78,41 @@ class Rack:
 
         return self.rack[slot-1]
 
+    def invalidate_slot(slot):
+        self.invalid_slot.set(slot)
+
     def add_bit(self, bit, position=None):
         """
         Add the bit to the rack.
+        The bit must be a cutting tool or None
         If the position is None, find the next available position which
          starts with the first available slot from the right
         """
-        if position is None:
-            position = self.find_free_position()
-        elif position < 1 or position > len(self.rack):
-            raise ValueError("Invalid position")
+        if self.size:
+            if position is None:
+                position = self.find_free_position()
+            elif position < 1 or position > len(self.rack):
+                raise ValueError("Invalid position")
 
-        if self.rack[position - 1] is not None:
-            logger.warning(
-                f"Warning: Slot {position} already occupied with "
-                "{self.rack[position - 1]}"
-            )
+            if self.rack[position - 1] is not None:
+                logger.warning(
+                    f"Warning: Slot {position} already occupied with "
+                    "{self.rack[position - 1]}"
+                )
 
         # Chech if the same diameter is not already occupied
         for dia, slot in self.items():
-            if bit == dia:
+            if dia and bit == dia:
                 logger.warning(
-                    f"Warning: Bit {dia} in T{position:02} "
+                    f"Warning: Bit {dia} in T{slot:02} "
                     "is already present in the rack at T{slot:02}. "
                     "This slot will not be used."
                 )
 
-        self.rack[position - 1] = bit
-
+        if self.size:
+            self.rack[position - 1] = bit
+        else:
+            self.rack.append(bit)
 
     def merge(self, rack: Self):
         """
@@ -175,27 +185,27 @@ class Rack:
             if self.rack[zi] is None:
                 retval = i
                 continue
-
-            if retval is None:
-                if extend:
-                    self.rack.append(None)
-                    retval = len(self.rack)
+            else:
+                if retval:
                     break
-                elif zi == 0:
-                    # No more
-                    return None
+
+        if retval is None:
+            if extend:
+                self.rack.append(None)
+                retval = len(self.rack)
 
         return retval
 
     def __repr__(self):
         rack_str = ""
-        for (id, dia) in enumerate(self.rack):
-            if dia is None:
+        for (id, t) in enumerate(self.rack):
+            if t is None:
                 rack_str += f"T{id+1:02}:x "
-            elif dia.imag:
-                rack_str += f"T{id+1:02}:R{dia.imag} "
             else:
-                rack_str += f"T{id+1:02}:{dia} "
+                tt = " " if t.type is DrillBit else "R"
+                dia = t.diameter
+                rack_str += f"T{id+1:02}:{tt}{dia} "
+
         return rack_str
 
 
