@@ -3,10 +3,22 @@ import re
 
 from math import tan, cos, sin, radians
 from typing import List, Tuple
-import pcbnew
+from .units import um, degree
+from .utils import Coordinate
 
-class Hole:
-    """ Representation of a Hole information collected from KiCAD """
+from numpy import array
+
+class Feature:
+    @classmethod
+    @property
+    def type(cls):
+        return cls
+
+class Hole(Feature):
+    """
+    Representation of a Hole information collected from KiCAD
+    All dimensions shall be given as Length objects
+    """
     def __init__(self, d, x, y, pth=True):
         self.x = x
         self.y = y
@@ -14,13 +26,13 @@ class Hole:
         self.diameter = d
 
         # To be added by the machining
-        self.tool_id = 0 # Type: complex
+        self.tool_id = 0
 
     def __repr__(self) -> str:
         return str(self)
 
     def __str__(self):
-        return f"{MM(self.diameter):6.2f} ({MM(self.x):>8.2f}, {MM(self.y):<8.2f})"
+        return f"{self.diameter} ({self.x}, {self.y})"
 
 
 class Oblong(Hole):
@@ -39,79 +51,62 @@ class Oblong(Hole):
         return "O" + super().__str__()
 
 
+class Route(Feature):
+    pass
+
+
 class Inventory:
     """
-    Create an inventory of items which will require some machine.
+    Create an inventory of Features which will require some machine.
     The inventory is created from the PCB data and does not factor how it will be machined
     """
-    def __init__(self, board):
-        from pcbnew import PCB_VIA_T
-        
-        self.holes = list() # type: List[Hole]
-        self.routing_segments = []
-
-        # Start with the pads
-        self.process_pads(board.GetPads())
-        self.process_vias([t for t in board.GetTracks() if t.Type() == PCB_VIA_T])
+    def __init__(self):
+        self.pth = {} # type: Dict[Length, Feature]
+        self.npth = {} # type: Dict[Length, Feature]
 
         # Work out the offset
         self.offset = board.GetDesignSettings().GetAuxOrigin()
 
-    def process_pads(self, pads):
-        from pcbnew import PAD_ATTRIB_PTH, PAD_ATTRIB_NPTH, PAD_DRILL_SHAPE_CIRCLE, \
-        PAD_DRILL_SHAPE_OBLONG
+    def _add_hole(self, hole: Hole, pth):
+        if pth:
+            self.pth_holes[hole.diameter] = hole
+        else:
+            self.npth_holes[hole.diameter] = hole
 
-        for pad in pads:
-            # Check for pads where drilling or routing is required
-            pad_attr = pad.GetAttribute()
+    def add_hole(self, pos_x, pos_y, size_x, size_y, orient, pth):
+        """
+        Add a hole to the inventory
 
-            if pad_attr in [PAD_ATTRIB_PTH, PAD_ATTRIB_NPTH]:
-                pos = pad.GetPosition()
-                size_x = pad.GetDrillSizeX()
-                size_y = pad.GetDrillSizeY()
-                
-                # Drill or route?
-                if (pad.GetDrillShape() == PAD_DRILL_SHAPE_CIRCLE) or (size_x == size_y):
-                    self.holes.append(
-                        Hole(pad.GetDrillSizeX(), pos[0], pos[1], pad_attr == PAD_ATTRIB_PTH)
-                    )
-                elif pad.GetDrillShape() == PAD_DRILL_SHAPE_OBLONG:
-                    # Oblong pad location is the center
-                    # X and Y sizes, with the orientation gives the start hole and end
-                    orientation_degree = pad.GetOrientationDegrees()
+        @param pos_x, pos_y Position of the hole in KiCad coordinate values
+        @param size_x, size_y Size of the hole. Oblong hole have different sizes
+        @param orient Orientation of the hole
+        """
+        pos = Coordinate(um(pos_x), -um(pos_y))
 
-                    # Determine the orientation
-                    # WARNING : As KiCad uses screen coordinates, angles are inverted
-                    hole_width = min(size_x, size_y)
-                    radius = (max(size_x, size_y) - hole_width) / 2
-                    angle = radians((90 if size_x < size_y else 0) - orientation_degree)
-                    dx = radius * cos(angle)
-                    dy = radius * sin(angle)
-                    x1, y1 = (pos[0] + dx, pos[1] + dy)
-                    x2, y2 = (pos[0] - dx, pos[1] - dy)
+        if size_x == size_y:
+            self._add_hole(
+                Hole(um(size_x), pos),
+                pth
+            )
+        else:
+            orientation = degree(orient)
 
-                    # Append an oblong hole
-                    self.holes.append(
-                        Oblong(hole_width, x1, y1, x2, y2, pad_attr == PAD_ATTRIB_PTH)
-                    )
+            # Determine the orientation
+            # WARNING : As KiCad uses screen coordinates, angles are inverted
+            hole_width = min(size_x, size_y)
+            radius = (max(size_x, size_y) - hole_width) / 2
+            angle = radians((90 if size_x < size_y else 0) - orient)
+            dx = radius * cos(angle)
+            dy = radius * sin(angle)
+            x1, y1 = (pos[0] + dx, pos[1] + dy)
+            x2, y2 = (pos[0] - dx, pos[1] - dy)
 
-    def process_vias(self, vias):
-        from pcbnew import VIATYPE_THROUGH
-
-        for via in vias:
-            hole_sz = via.GetDrillValue()
-
-            # Must have a hole!
-            if hole_sz == 0:
-                continue
-
-            if via.GetViaType() != VIATYPE_THROUGH:
-                # We don't support burried vias
-                continue
-
-            # Check the via is through - discard other holes
-            x, y = via.GetStart()
-
-            self.holes.append(
-                Hole(via.GetDrillValue(), x, y)
+            # Append an oblong hole
+            self._add_holes(
+                Oblong(
+                    um(hole_width),
+                    Coordinate(um(x1), um(y1)),
+                    Coordinate(um(x2), um(y2))
+                ),
+                pth
             )

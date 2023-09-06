@@ -10,38 +10,62 @@ __email__ = "software@arreckx.com"
 Example file to convert a PCB to gcode
 Note : Work in progress
 """
-import pcbnew
-
 from pathlib import Path
 
-from inventory import Inventory
-from machining import Machining, MachiningWhat
-from rack import RackManager, Rack
+from .pcb_inventory import Inventory
+from .machining import Machining, Operations
+from .rack import RackManager, Rack
+from .board_processor import BoardProcessor
 
-# Load from this folder
-this_path = Path(__file__).resolve().parent
-pcb_file_path = this_path.parent / "pulsegen/pulsegen.kicad_pcb"
-board = pcbnew.LoadBoard(str(pcb_file_path))
+import click
 
-# Load the rack configuration
-rack_manager = RackManager()
-current_rack = RackManager.get_rack()
+@click.command()
+@click.option(
+   '-p', '--pth', is_flag=True, default=False,
+   help='Drill and route all requiring plating.')
+@click.option(
+   '-n', '--npth', is_flag=True, default=False,
+   help='Final drills and route and non-plated features')
+@click.option(
+   '-l', '--outline', is_flag=True,
+   default=False, help='Route the PCB outiline')
+@click.option(
+   '-a', '--all', is_flag=True,
+   default=False, help='Do all operations')
+@click.option(
+   '-o', help='Specify an output file name')
+@click.argument('filename', type=click.Path(exist=True, readable=True),
+   help="File to process")
+@click.pass_context
+def pcb2gcode(ctx, *args, **kwargs):
+   # Get the inventory using the board_processor
+   processor = BoardProcessor(args[0])
+   inventory = processor.inventory
 
-# Create an inventory of all things which could be machined in the PCB
-inventory = Inventory(board)
+   # Get the operations
+   ops = Operations.DRILL_PTH if kwargs['pth']
+   ops |= Operations.DRILL_PTH if kwargs['npth']
+   ops |= Operations.ROUTE_OUTLINE if kwargs['route']
 
-# Create an object to machine PTH only
-machining = Machining(inventory)
+   # Load the rack configuration
+   rack_manager = RackManager()
+   current_rack = RackManager.get_rack()
 
-# Grab the rack
-required_rack = machining.create_tool_rack(MachiningWhat.DRILL_PTH)
-current_rack.merge(required_rack)
+   # Create an object to machine PTH only
+   machining = Machining(inventory, ops)
 
-# What does the operator needs to do?
-rack_ops = required_rack.diff(current_rack)
-print(rack_ops)
+   # Grab the rack
+   required_rack = machining.create_tool_rack()
+   current_rack.merge(required_rack)
 
-# Generate the GCode
-gcode = machining.gcode(MachiningWhat.DRILL_PTH)
+   # What does the operator needs to do?
+   rack_ops = required_rack.diff(current_rack)
 
-print(gcode)
+   # Generate the GCode
+   gcode = machining.gcode()
+
+   kwargs['output'].write(gcode)
+
+
+if __name__ == '__main__':
+    pcb2gcode()

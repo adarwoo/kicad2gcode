@@ -311,6 +311,17 @@ files = [
 referencing = ">=0.28.0"
 
 [[package]]
+name = "kiutils"
+version = "1.4.4"
+description = "Simple and SCM-friendly KiCad file parser for KiCad 6.0 and up"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "kiutils-1.4.4-py3-none-any.whl", hash = "sha256:7c535c5d416e3446695280e97778ba217f39ff3a06f25599f78a4dbbe1ded668"},
+    {file = "kiutils-1.4.4.tar.gz", hash = "sha256:3307fcec725e7c8e1d5ee47873a29d5334b3fa636064a384389d7711ea74fe9f"},
+]
+
+[[package]]
 name = "mpmath"
 version = "1.3.0"
 description = "Python library for arbitrary-precision floating-point arithmetic"
@@ -842,4 +853,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "5947b28c927d642d87ac5fe8ecc96ac3a7f1c8c4f0f9c0a8e484d345f8d541b6"
+content-hash = "62dcefcf7066e2402d16b67aea5921a7f3ead64a231d0e26a1856deb5f8a0cbe"

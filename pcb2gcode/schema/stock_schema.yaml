@@ -113,4 +113,3 @@ properties:
         - type: number
         - type: string
           pattern": "^(?:\\d+(?:\\.\\d+)?|\\d+\\/\\d+)(?:mm|in|mil|thou|inch|cm)$"
-

@@ -11,6 +11,7 @@ from typing import Self
 
 from collections import OrderedDict
 from .config import global_settings as gs
+from .cutting_tools import CuttingTool
 
 from .cutting_tools import DrillBit
 
@@ -19,6 +20,22 @@ import os
 
 
 logger = logging.getLogger(__name__)
+
+
+class RackSetupOp:
+    def __init__(self, slot, final_tool) -> None:
+        self.slot = slot
+        self.final_tool = final_tool
+
+
+class RackAddTool(RackSetupOp):
+    def __init__(self, slot, final_tool) -> None:
+        super().__init__(slot, final_tool)
+
+
+class RackReplaceTool(RackSetupOp):
+    def __init__(self, slot, from_tool, final_tool) -> None:
+        super().__init__(slot, final_tool)
 
 
 class Rack:
@@ -78,23 +95,29 @@ class Rack:
 
         return self.rack[slot-1]
 
-    def invalidate_slot(slot):
+    def invalidate_slot(self, slot):
+        """
+        Renders the given slot (indexed from 1) not in use
+        """
         self.invalid_slot.set(slot)
 
-    def add_bit(self, bit, position=None):
+    def add_bit(self, bit, position=None, no_warn=False):
         """
         Add the bit to the rack.
         The bit must be a cutting tool or None
         If the position is None, find the next available position which
          starts with the first available slot from the right
+        Raise: ValueError if the rack is full
         """
         if self.size:
             if position is None:
                 position = self.find_free_position()
             elif position < 1 or position > len(self.rack):
+                if slot in self.invalid_slot:
+                    logger.warning(f"Slot {slot} is not usable")
                 raise ValueError("Invalid position")
 
-            if self.rack[position - 1] is not None:
+            if self.rack[position - 1] is not None and not no_warn:
                 logger.warning(
                     f"Warning: Slot {position} already occupied with "
                     "{self.rack[position - 1]}"
@@ -118,30 +141,29 @@ class Rack:
         """
         Merge all the tools from the given rack into this one
         """
-        def merge_set(tools):
-            for dia in tools:
-                if dia not in self.keys():
-                    pos = self.find_free_position(False)
+        operations = []
 
-                    if pos is None:
-                        # Look for unused bits in the rack and replace them
-                        replaced = False
+        for tool_to_set in rack.values():
+            if tool_to_set not in self.keys():
+                pos = self.find_free_position(False)
 
-                        for dia, slot in self.items():
-                            if dia not in rack:
-                                # Remove!
-                                self.add_bit(dia, slot)
-                                replaced = True
-                                break
+                if pos is None:
+                    # Look for unused bits in the rack and replace them
+                    replaced = False
 
-                        if not replaced:
-                            logger.error(f"Rack is full. Cannot add tool {DIA_TO_STR(dia)}")
-                    else:
-                        self.add_bit(dia, pos)
+                    for tool_to_replace, slot in reversed(self.items()):
+                        if tool_to_replace not in rack:
+                            # Replace
+                            self.add_bit(tool_to_set, slot, True)
+                            operations.append(RackReplaceTool(slot, tool_to_replace, tool_to_set))
+                            replaced = True
+                            break
 
-        # Iterate drill bits first
-        merge_set( [tool for tool in self.key() if not tool.imag] )
-        merge_set( [tool for tool in self.key() if tool.imag] )
+                    if not replaced:
+                        logger.error(f"Rack is full. Cannot add tool {tool_to_set}")
+                else:
+                    operations.append(RackAddTool(pos, tool_to_set))
+                    self.add_bit(tool_to_set, pos)
 
     def diff(self, rack:Self):
         """
@@ -229,7 +251,7 @@ class RackManager:
         self.size = rack.size
         self.rack = Rack(self.size)
 
-        selection = rack.use
+        self.selection = rack.use
 
     def save(self, RACK_FILE):
         # TODO
@@ -239,7 +261,3 @@ class RackManager:
         """ @return A deep copy of the current rack """
         return self.rack.clone(False)
 
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    r = RackManager()
-    print(r.rack)

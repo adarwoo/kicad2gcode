@@ -32,7 +32,8 @@ class CutDir(IntEnum):
 
 
 class CuttingTool:
-    __stock__ = []
+    # Name of the stock in the config["stock"]
+    __stockname__ = None
     allow_bigger = False
 
     def __init__(self, diameter: Length, mfg_data):
@@ -69,7 +70,7 @@ class CuttingTool:
 
         # Start with the largest bit - rational : A bigger hole will accomodate the part
         # In most cases, the plating (0.035 nominal) will make the hole smaller in the end
-        for s in reversed(sorted(cls.__stock__)):
+        for s in reversed(sorted(stock.get(cls.__stockname__, []))):
             lower = v - ((v * gs.downsizing_allowance_percent) / 100)
             upper = v + ((v * gs.oversizing_allowance_percent) / 100)
 
@@ -101,8 +102,8 @@ class CuttingTool:
         """
         @return The min-max range of the stock cutter sizes in Length
         """
-        stock = sorted(cls.__stock__)
-        return (stock[0], stock[-1])
+        thestock = sorted(stock.get(cls.__stockname__,[]))
+        return (thestock[0], thestock[-1])
 
     def get_nearest_stock_size(self):
         """
@@ -186,7 +187,7 @@ class CuttingTool:
 
 
 class DrillBit(CuttingTool):
-    __stock__ = stock.drillbits
+    __stockname__ = "drillbits"
 
     def __init__(self, diameter):
         super().__init__(diameter, md.drillbits)
@@ -201,7 +202,7 @@ class DrillBit(CuttingTool):
 
 
 class RouterBit(CuttingTool):
-    __stock__ = stock.routerbits
+    __stockname__ = "routerbits"
 
     def __init__(self, diameter):
         super().__init__(diameter, md.routerbits)
