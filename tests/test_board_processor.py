@@ -1,3 +1,4 @@
+from pathlib import Path
 from pcb2gcode.board_processor import BoardProcessor
 
 def test_simple_file():
