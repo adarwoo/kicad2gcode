@@ -46,6 +46,7 @@ def test_atc():
    r.add_bit(DrillBit(1.8*mm))
    r.add_bit(DrillBit(1.9*mm))
    r.add_bit(RouterBit(0.8*mm))
+   
    assert r.get_tool(3).diameter == 1.8*mm
    assert r.get_tool(4).diameter == 1.9*mm
    assert r.get_tool(1).diameter == 0.8*mm and r.get_tool(1).type is RouterBit

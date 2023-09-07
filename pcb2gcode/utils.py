@@ -1,13 +1,16 @@
 from typing import List, Tuple, Dict
-
 import bisect
 
 
 class Coordinate:
+    """
+    Helper object to store coordinates which could be visited
+    to be later rendered using different offset and scale.
+    """
     def __init__(self, x: int, y: int):
+        """ Construct using int """
         self.x = x
         self.y = y
-
 
 def round_significant(number, significant_digits=4):
     rounded = float("{:.{}g}".format(number, significant_digits))

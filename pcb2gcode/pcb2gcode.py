@@ -43,9 +43,9 @@ def pcb2gcode(ctx, *args, **kwargs):
    inventory = processor.inventory
 
    # Get the operations
-   ops = Operations.DRILL_PTH if kwargs['pth']
-   ops |= Operations.DRILL_PTH if kwargs['npth']
-   ops |= Operations.ROUTE_OUTLINE if kwargs['route']
+   ops = Operations.PTH if kwargs['pth']
+   ops |= Operations.PTH if kwargs['npth']
+   ops |= Operations.OUTLINE if kwargs['route']
 
    # Load the rack configuration
    rack_manager = RackManager()

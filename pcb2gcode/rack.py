@@ -6,36 +6,33 @@
 # Can also be used to compute the wear of the bits in the rack
 
 # Complex number are used where real part is a drill bit and the imaginary a router
-
-from typing import Self
-
 from collections import OrderedDict
-from .config import global_settings as gs
-from .cutting_tools import CuttingTool
+from typing import List
 
-from .cutting_tools import DrillBit
+from .config import global_settings as gs
+from .cutting_tools import CuttingTool, DrillBit, RouterBit
 
 import logging
-import os
 
 
 logger = logging.getLogger(__name__)
 
 
 class RackSetupOp:
-    def __init__(self, slot, final_tool) -> None:
+    def __init__(self, slot, name, final_tool) -> None:
         self.slot = slot
         self.final_tool = final_tool
+        self.name = name
 
 
 class RackAddTool(RackSetupOp):
     def __init__(self, slot, final_tool) -> None:
-        super().__init__(slot, final_tool)
+        super().__init__(slot, "ADD", final_tool)
 
 
 class RackReplaceTool(RackSetupOp):
     def __init__(self, slot, from_tool, final_tool) -> None:
-        super().__init__(slot, final_tool)
+        super().__init__(slot, "REPLACE", final_tool)
 
 
 class Rack:
@@ -53,7 +50,7 @@ class Rack:
         """
         self.rack = [None] * size # Else contains CuttingTools
         self.size = size
-        self.invalid_slot = {}
+        self.invalid_slot = set()
 
     def __getitem__(self, key):
         return self.rack[key - 1]
@@ -99,9 +96,9 @@ class Rack:
         """
         Renders the given slot (indexed from 1) not in use
         """
-        self.invalid_slot.set(slot)
+        self.invalid_slot.add(slot)
 
-    def add_bit(self, bit, position=None, no_warn=False):
+    def add_bit(self, bit: CuttingTool, position=None, no_warn=False):
         """
         Add the bit to the rack.
         The bit must be a cutting tool or None
@@ -113,23 +110,22 @@ class Rack:
             if position is None:
                 position = self.find_free_position()
             elif position < 1 or position > len(self.rack):
-                if slot in self.invalid_slot:
-                    logger.warning(f"Slot {slot} is not usable")
+                if position in self.invalid_slot:
+                    logger.warning("Slot %d is not usable", position)
+                    
                 raise ValueError("Invalid position")
 
             if self.rack[position - 1] is not None and not no_warn:
                 logger.warning(
-                    f"Warning: Slot {position} already occupied with "
-                    "{self.rack[position - 1]}"
+                    "Warning: Slot %d already occupied with %s", position, self.rack[position - 1]
                 )
 
         # Chech if the same diameter is not already occupied
         for dia, slot in self.items():
             if dia and bit == dia:
                 logger.warning(
-                    f"Warning: Bit {dia} in T{slot:02} "
-                    "is already present in the rack at T{slot:02}. "
-                    "This slot will not be used."
+                    "Warning: Bit %s in T%.2d is already present in the rack at T%.2d.\n"
+                    "This slot will not be used.", dia, position, slot
                 )
 
         if self.size:
@@ -137,15 +133,15 @@ class Rack:
         else:
             self.rack.append(bit)
 
-    def merge(self, rack: Self):
+    def merge(self, rack) -> List[RackSetupOp]:
         """
         Merge all the tools from the given rack into this one
         """
         operations = []
 
-        for tool_to_set in rack.values():
+        for tool_to_set in rack.keys():
             if tool_to_set not in self.keys():
-                pos = self.find_free_position(False)
+                pos = self.find_free_position()
 
                 if pos is None:
                     # Look for unused bits in the rack and replace them
@@ -160,36 +156,17 @@ class Rack:
                             break
 
                     if not replaced:
-                        logger.error(f"Rack is full. Cannot add tool {tool_to_set}")
+                        logger.error("Rack is full. Cannot add tool {%s}", tool_to_set)
                 else:
+                    self.rack[pos-1] = tool_to_set
                     operations.append(RackAddTool(pos, tool_to_set))
-                    self.add_bit(tool_to_set, pos)
-
-    def diff(self, rack:Self):
-        """
-        Diff racks and compile a list of actions from the operator
-        This rack is the final rack
-        """
-        retval = OrderedDict() # type: Dict[int, tuple[str, complex]]
-
-        for slot in self.values():
-            this_dia = self.rack[slot]
-            their_dia = rack.get_tool(slot)
-
-            if this_dia is None:
-                continue
-
-            if their_dia is None:
-                retval[slot] = ("ADD", this_dia)
-            else:
-                retval[slot] = ("REPLACE", this_dia)
-
-        return retval
+        
+        return operations
 
     def remove_bit(self, bit):
         self.rack.remove(bit)
 
-    def find_free_position(self, extend=True):
+    def find_free_position(self):
         """
         Return a tool position position in the rack which is free.
         By default, it will return the last position from the end which
@@ -201,10 +178,11 @@ class Rack:
         x x x i x i x x
         """
         retval = None
+        extend = (self.size == 0)
 
         for i in range(len(self.rack), 0, -1):
             zi = i - 1
-            if self.rack[zi] is None:
+            if (self.rack[zi] is None) and (zi not in self.invalid_slot):
                 retval = i
                 continue
             else:
@@ -217,6 +195,30 @@ class Rack:
                 retval = len(self.rack)
 
         return retval
+    
+    def request(self, what: CuttingTool):
+        """
+        Request a cutting tool from the rack.
+        The tool is first standardized, then searched in the rack.
+        If the tool cannot be found, it is added to the rack
+
+        Args:
+            what (CuttingTool): A cutting tool
+        """
+        # Grab a standard cutting tool
+        retval = CuttingTool.request(what)
+        
+        if not retval:
+            raise ValueError("Cannot get bit size from stock")
+        
+        # Locate in this rack
+        for tool, slot in self.items():
+            if tool == what:
+                return slot
+        
+        # Not found add it
+        return self.add_bit(retval)
+
 
     def __repr__(self):
         rack_str = ""
@@ -229,7 +231,7 @@ class Rack:
                 rack_str += f"T{id+1:02}:{tt}{dia} "
 
         return rack_str
-
+        
 
 class RackManager:
     """
@@ -244,14 +246,43 @@ class RackManager:
     change the tools, and is considered of size unlimited.
     """
     def __init__(self) -> None:
-        from .config import rack
+        from .config import rack as rc
 
         # Process the rack_data
-        self.issue = rack.issue
-        self.size = rack.size
-        self.rack = Rack(self.size)
+        self.issue = rc.issue
+        self.size = rc.size
+        self.racks = OrderedDict()
+        
+        for id, tools in rc.racks.items():
+            rack = Rack(self.size)
+            current_slot = 1
+            
+            for tool in tools:
+                if "slot" in tool:
+                    current_slot = tool["slot"]
+                else:
+                    current_slot += 1
+                    
+                if tool.get("use", True) is False:
+                    rack.invalidate_slot(current_slot)
+                elif "drill" in tool:
+                    rack.add_bit(DrillBit(tool["drill"]))
+                elif "router" in tool:
+                    rack.add_bit(RouterBit(tool["drill"]))
+                else:
+                    assert False, "unreachable"
 
-        self.selection = rack.use
+            self.racks[id] = rack
+               
+        use = rc.get("use", None)
+        
+        if use:
+            if use in self.racks:
+                self.rack = self.racks[use]
+            else:
+                logger.error("'use'='%s' does not match any given rack. Ignoring.", use)
+        else:
+            self.rack = Rack(self.size)
 
     def save(self, RACK_FILE):
         # TODO

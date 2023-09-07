@@ -1,11 +1,14 @@
 """
 Process a board in order to create an inventory
+All KiCAD coordinate and positions are converter here
+No KiCAD is exposed outside of this file
 """
 from pathlib import Path
+from math import radians, cos, sin
 from logging import getLogger
 
-from .rack import RackManager, Rack
-from .units import Length
+from .utils import Coordinate
+from .units import nm, degree
 from .pcb_inventory import Inventory
 
 logger = getLogger(__name__)
@@ -48,84 +51,75 @@ def append_path():
          logger.info("Got: {}", exception)
          print(exception)
    else:
-      # TODO
-      pass
+      # Python case
+      from .constants import THIS_PATH
+      import os
+      
+      kicad = THIS_PATH / "pcbnew"
+      os.environ["LD_LIBRARY_PATH"] = str(kicad) + os.pathsep + os.environ.get("LD_LIBRARY_PATH","")
+      sys.path.append(str(kicad))
 
 try:
    append_path()
-   print("XXXXXXXXXXXXXXXXXXXXX", )
    from pcbnew import LoadBoard, BOARD, PCB_VIA_T, VIATYPE_THROUGH, \
       PAD_ATTRIB_PTH, PAD_ATTRIB_NPTH, PAD_DRILL_SHAPE_CIRCLE, PAD_DRILL_SHAPE_OBLONG
 except:
    raise RuntimeError("Failed to import pcbnew")
 
 
+def tocoord(x, y=None):
+   """ @return A traditional coordinate given in Units """
+   if y is None:
+      return Coordinate(nm(x[0]), nm(-x[1]))
+   return Coordinate(nm(x), nm(0-y))
+   
+
 class BoardProcessor:
    def __init__(self, pcb_file_path):
-      LoadBoard(pcb_file_path)
+      board = LoadBoard(pcb_file_path)
 
-      self.inventory = Inventory()
+      # Work out the offset
+      offset = board.GetDesignSettings().GetAuxOrigin()
+
+      self.inventory = Inventory(tocoord(offset))
+      
+      # Work out the offset
+      self.offset = board.GetDesignSettings().GetAuxOrigin()
 
       # Start with the pads
-#      self.process_pads(board.GetPads())
-#      self.process_vias([t for t in board.GetTracks() if t.Type() == PCB_VIA_T])
+      self.process_pads(board.GetPads())
+      self.process_vias([t for t in board.GetTracks() if t.Type() == PCB_VIA_T])
 
-#      # Work out the offset
-#      self.offset = board.GetDesignSettings().GetAuxOrigin()
+   def process_pads(self, pads):
+      for pad in pads:
+         # Check for pads where drilling or routing is required
+         pad_attr = pad.GetAttribute()
 
-#  def process_pads(self, pads):
+         if pad_attr in [PAD_ATTRIB_PTH, PAD_ATTRIB_NPTH]:
+            pos = pad.GetPosition()
+            coord = tocoord(pos[0], pos[1])
+            angle = degree(pad.GetOrientationDegrees())
+            size_x = nm(pad.GetDrillSizeX())
+            size_y = nm(pad.GetDrillSizeY())
+            pth = (pad_attr == PAD_ATTRIB_PTH)
 
-#      for pad in pads:
-#          # Check for pads where drilling or routing is required
-#          pad_attr = pad.GetAttribute()
+            # Drill or route?
+            self.inventory.add_hole(
+               coord, size_x, size_y=size_y, angle=angle, pth=pth)
 
-#          if pad_attr in [PAD_ATTRIB_PTH, PAD_ATTRIB_NPTH]:
-#              pos = pad.GetPosition()
-#              size_x = pad.GetDrillSizeX()
-#              size_y = pad.GetDrillSizeY()
+   def process_vias(self, vias):
+      for via in vias:
+         hole_sz = via.GetDrillValue()
 
-#              # Drill or route?
-#              if (pad.GetDrillShape() == PAD_DRILL_SHAPE_CIRCLE) or (size_x == size_y):
-#                  self.holes.append(
-#                      Hole(pad.GetDrillSizeX(), pos[0], pos[1], pad_attr == PAD_ATTRIB_PTH)
-#                  )
-#              elif pad.GetDrillShape() == PAD_DRILL_SHAPE_OBLONG:
-#                  # Oblong pad location is the center
-#                  # X and Y sizes, with the orientation gives the start hole and end
-#                  orientation_degree = pad.GetOrientationDegrees()
+         # Must have a hole!
+         if hole_sz == 0:
+            continue
 
-#                  # Determine the orientation
-#                  # WARNING : As KiCad uses screen coordinates, angles are inverted
-#                  hole_width = min(size_x, size_y)
-#                  radius = (max(size_x, size_y) - hole_width) / 2
-#                  angle = radians((90 if size_x < size_y else 0) - orientation_degree)
-#                  dx = radius * cos(angle)
-#                  dy = radius * sin(angle)
-#                  x1, y1 = (pos[0] + dx, pos[1] + dy)
-#                  x2, y2 = (pos[0] - dx, pos[1] - dy)
+         if via.GetViaType() != VIATYPE_THROUGH:
+            # We don't support burried vias
+            continue
 
-#                  # Append an oblong hole
-#                  self.holes.append(
-#                      Oblong(hole_width, x1, y1, x2, y2, pad_attr == PAD_ATTRIB_PTH)
-#                  )
+         # Check the via is through - discard other holes
+         x, y = via.GetStart()
 
-#  def process_vias(self, vias):
-
-#      for via in vias:
-#          hole_sz = via.GetDrillValue()
-
-#          # Must have a hole!
-#          if hole_sz == 0:
-#              continue
-
-#          if via.GetViaType() != VIATYPE_THROUGH:
-#              # We don't support burried vias
-#              continue
-
-#          # Check the via is through - discard other holes
-#          x, y = via.GetStart()
-
-#          self.holes.append(
-#              Hole(via.GetDrillValue(), x, y)
-#          )
-
+         self.inventory.add_hole( tocoord(x, y), nm(hole_sz))

@@ -287,13 +287,14 @@ class Rpm(Unit):
     __default__ = "rpm"
 
 # Define unit objects
-um = Length("um", 1)
-mm = Length("mm", 1000)
-cm = Length("cm", 10000)
-mil = Length("mil", 25.4)
-thou = Length("thou", 25.4)
-inch = Length("inch", 25400)
-_in = Length("in", 25400)
+nm = Length("um", 1)
+um = Length("um", 1000)
+mm = Length("mm", 1000000)
+cm = Length("cm", 10000000)
+mil = Length("mil", 25400)
+thou = Length("thou", 25400)
+inch = Length("inch", 25400000)
+_in = Length("in", 25400000)
 
 # Define feedrate units
 mm_min = FeedRate("mm/min", 1)

@@ -1,3 +1,5 @@
+from pytest import MonkeyPatch
+
 from pcb2gcode.cutting_tools import DrillBit, RouterBit, CutDir, CuttingTool
 from pcb2gcode.units import mm, rpm, mm_min, degree, inch, um
 from pcb2gcode.config import stock
@@ -21,7 +23,7 @@ def test_stock():
    v = RouterBit.get_from_stock(1.58 * mm)
    assert v.diameter == 1.5*mm
 
-def test_request():
+def test_request(monkeypatch):
    v_ok = CuttingTool.request(DrillBit(2*mm))
    assert v_ok and v_ok.type is DrillBit and v_ok.diameter == 2*mm
 
@@ -44,8 +46,8 @@ def test_request():
    assert v_fail and v_fail.type is RouterBit and v_fail.diameter == 1.6*mm
 
    # Remove all router from stock
-   stock["routerbits"] = [1*mm]
-   stock["drillbits"] = [0.5*mm]
+   monkeypatch.setitem(stock, "routerbits", [1*mm])
+   monkeypatch.setitem(stock, "drillbits", [0.5*mm])
 
    # Since the only bit is 0.5mm and the tolerance 10% - and since it cannot be routed - fail
    v_fail = CuttingTool.request(DrillBit(0.75*mm))

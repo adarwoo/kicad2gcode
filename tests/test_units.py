@@ -7,17 +7,17 @@ def test_simple():
    v_mm = mm(10)
    assert str(v_mm) == "10mm"
    assert v_mm.value == 10
-   assert v_mm.base == 10000
+   assert v_mm.base == 10000000
 
    v_mm = mm(15.45)
    assert str(v_mm) == "15.45mm"
    assert v_mm.value == 15.45
-   assert v_mm.base == 15450
+   assert v_mm.base == 15450000
 
    v_mm = 7*mm
    assert str(v_mm) == "7mm"
    assert v_mm.value == 7
-   assert v_mm.base == 7000
+   assert v_mm.base == 7000000
 
    with pytest.raises(TypeError):
       v_mm == "7mm"

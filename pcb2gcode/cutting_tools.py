@@ -51,6 +51,9 @@ class CuttingTool:
         key_unit = Unit.get_unit(self.mfg_data.units[0])
         scalar_value = self.diameter(key_unit)
         self.interpolated_data = interpolate_lookup(self.mfg_data.data, scalar_value)
+        
+    def __eq__(self, other):
+        return self.type is other.type and self.diameter == other.diameter
 
     def interpolate(self, what):
         """ Using the manufactuing table and the diameter, interpolate a data """

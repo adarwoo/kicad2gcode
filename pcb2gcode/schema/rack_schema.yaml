@@ -55,11 +55,13 @@ properties:
               type: integer
               minimum: 1
             drill:
+              unit: Length(mm)
               anyOf:
                 - type: number
                 - type: string
                   pattern: "^(?:\\d+(?:\\.\\d+)?|\\d+\\/\\d+)(?:mm|in|mil|thou|inch|cm)$"
             router:
+              unit: Length(mm)
               anyOf:
                 - type: number
                 - type: string

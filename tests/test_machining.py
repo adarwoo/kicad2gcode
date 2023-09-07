@@ -2,21 +2,36 @@ from pathlib import Path
 
 #from pcb2gcode.pcb_inventory import Inventory
 #from pcb2gcode.machining import Machining, Operations
-from pcb2gcode.rack import RackManager, Rack
-
-from kiutils.board import Board
-from kiutils.items.brditems import Via, Segment
-from kiutils.items.common import Position
-
-this_path = Path('.')
-pcb_file_path = this_path / "pulsegen.kicad_pcb"
-b = Board.from_file(pcb_file_path)
+from pcb2gcode.rack import RackManager
+from pcb2gcode.pcb_inventory import Inventory
+from pcb2gcode.utils import Coordinate
+from pcb2gcode.units import mm
+from pcb2gcode.machining import Machining, Operations
+from pcb2gcode.cutting_tools import DrillBit
 
 
-def test_board():
+inventory = Inventory(Coordinate(0, 0))
 
-   b = Board.from_file(pcb_file_path)
+holes = {
+   0.5: [( 1,  1), ( 1, 100), (100,  1), (100, 100)],
+   0.8: [(21, 21), (21, 120), (120, 21), (120, 120)],
+   1.2: [(41, 41), (41, 140), (140, 41), (140, 140)]
+}
 
-   dir(b)
-   for pad in b.traceItems:
-      print(pad)
+# Create a simple inventory
+for dia, locs in holes.items():
+   for x, y in locs:
+      inventory.add_hole(Coordinate(x*mm, y*mm), dia*mm)
+
+
+def test_simple():
+   rack_man = RackManager()
+   from_rack = rack_man.get_rack()
+   machining = Machining(inventory)
+   
+   rack = machining.create_tool_rack(Operations.PTH)
+   ops = from_rack.merge(rack)
+
+   assert ops[0].name == "ADD" and ops[0].slot == 1 and ops[0].final_tool == DrillBit(0.5*mm)
+   assert ops[1].name == "ADD" and ops[1].slot == 2 and ops[1].final_tool == DrillBit(0.8*mm)
+   assert ops[2].name == "ADD" and ops[2].slot == 3 and ops[2].final_tool == DrillBit(1.2*mm)
