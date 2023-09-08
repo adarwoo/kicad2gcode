@@ -4,7 +4,6 @@ Common utilities
 import bisect
 from typing import List, Tuple, Set
 import numpy as np
-from python_tsp.exact import solve_tsp_dynamic_programming
 
 from .coordinate import Coordinate
 
@@ -44,40 +43,6 @@ def interpolate_lookup(table, value):
 
     return interpolated_values
 
-def optimize_travel(coordinates: List[Coordinate], segments: Set[Tuple(int, int)]=[]) -> List[int]:
-    """
-    Apply the Travelling Salesman Problem to the positions
-    the CNC will visit.
-    @param coordinates: A list of coordinates to visit
-    @param segments: Segments in the list. Holds a pair of indexes in the coordinates which
-                     represents the segment. A segment has a traveling cost of 0
-    @returns The permutation list
-    """
-    def get_distance_matrix(coordinates):
-        """ Create a matrix of all distance using numpy """
-        num_coords = len(coordinates)
-        distance_matrix = np.zeros((num_coords, num_coords))
-
-        for i in range(num_coords):
-            for j in range(i + 1, num_coords):
-                if (i, j) in segments or (j, i) in segments:
-                    distance = 0
-                else:
-                    distance = np.linalg.norm(np.array(coordinates[i]) - np.array(coordinates[j]))
-
-                # Assign distance to both (i, j) and (j, i) positions in the matrix
-                distance_matrix[i, j] = distance
-                distance_matrix[j, i] = distance
-
-        return distance_matrix
-
-    retval = []
-
-    if coordinates:
-        distance_matrix = get_distance_matrix(coordinates)
-        permutation, _ = solve_tsp_dynamic_programming(distance_matrix)
-
-    return permutation
 
 def interpolate_points(start: Coordinate, end: Coordinate, spacing):
     # Convert the start and end points to NumPy arrays

@@ -298,4 +298,8 @@ class RackManager:
     def get_rack(self):
         """ @return A deep copy of the current rack """
         return self.rack.clone(False)
+    
+    @property
+    def is_manual(self):
+        return self.size == 0
 

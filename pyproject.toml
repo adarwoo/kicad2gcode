@@ -18,6 +18,9 @@ kiutils = "^1.4.4"
 numpy = "^1.25.2"
 click = "^8.1.7"
 
+[tool.poetry.scripts]
+pcb2gcode = "pcb2gcode.pcb2gcode:pcb2gcode"
+
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.0"
 pytest-cov = "^4.1.0"

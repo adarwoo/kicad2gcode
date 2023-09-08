@@ -1,29 +1,70 @@
-#!/usr/bin/python3
+"""
+Creates the machining GCode based on a Rack and Inventory
+"""
 
 # Provides the 'Machining' class which uses the Inventory to check
 #  all machining aspects, like creating the rack and generating the GCode.
 # Dimensions are kept as um until the GCode rendering
 from collections import OrderedDict
-from typing import List, Dict, Union
+from typing import List, Dict, Set
 from io import BufferedIOBase
+import logging
+import numpy as np
 
-# Grab the setups
+from python_tsp.exact import solve_tsp_dynamic_programming
+
+# pylint: disable=E0611 # The module is fully dynamic
+from .config import global_settings as gs
+
 from .pcb_inventory import Inventory, Oblong, Hole, Route
 from .units import mm
 from .coordinate import Coordinate
 from .rack import Rack
 from .cutting_tools import DrillBit, RouterBit
-from .config import global_settings as gs
 from .operations import Operations
-from .utils import optimize_travel
-
-import logging
 
 
 logger = logging.getLogger(__name__)
 
 
+def optimize_travel(coordinates: List[Coordinate], segments: Set[int]=None) -> List[int]:
+    """
+    Apply the Travelling Salesman Problem to the positions the CNC will visit.
+    @param coordinates: A list of coordinates to visit
+    @param segments: Segments in the list. Holds a pair of indexes in the coordinates which
+                     represents the segment. A segment has a traveling cost of 0
+    @returns The permutation list
+    """
+    if segments is None:
+        segments = set()
+    
+    def get_distance_matrix(coordinates):
+        """ Create a matrix of all distance using numpy """
+        num_coords = len(coordinates)
+        distance_matrix = np.zeros((num_coords, num_coords))
+
+        for i in range(num_coords):
+            for j in range(i + 1, num_coords):
+                if i in segments and j == i + 1:
+                    distance = 0
+                else:
+                    distance = np.linalg.norm(np.array(coordinates[i]) - np.array(coordinates[j]))
+
+                # Assign distance to both (i, j) and (j, i) positions in the matrix
+                distance_matrix[i, j] = distance
+                distance_matrix[j, i] = distance
+
+        return distance_matrix
+
+    if coordinates:
+        distance_matrix = get_distance_matrix(coordinates)
+        permutation, _ = solve_tsp_dynamic_programming(distance_matrix)
+
+    return permutation
+
+
 class Move:
+    """ Abstract base class for machining actions """
     def __init__(self, start, end) -> None:
         """ Construct a basic move. Each move has a start and end """
         self.next = None
@@ -38,6 +79,7 @@ class Move:
         move.next = next
         
     def last(self):
+        """ Returns the last combined action """
         current = self
         while current.next:
             current = current.next
@@ -45,6 +87,7 @@ class Move:
 
 
 class LinearMove(Move):
+    """ Machining a straight line (router) """
     pass
 
 class ArcMove(Move):
@@ -105,12 +148,19 @@ class DrillHole(MachiningOperation):
     This operation is modal
     """
     def to_gcode_first(self, stream: BufferedIOBase, next=None):
-        stream.write(f"G0 X{self.origin.x(mm)} Y{self.origin.x(mm)}")
+        stream.write(f"G4 X{self.origin.x(mm)} Y{self.origin.x(mm)}")
 
 
 class RouteHole(MachiningOperation):
+    """
+    Use a router bit to route a hole.
+    Starts from the center, moves to the top or goes round.
+    """
     def __init__(self, origin, tool) -> None:
         super().__init__(origin, tool)
+
+    def to_gcode_first(self, stream: BufferedIOBase, next=None):
+        stream.write(f"G0 X{self.origin.x(mm)} Y{self.origin.x(mm)}")
 
 
 class RouteVector(MachiningOperation):
@@ -155,7 +205,9 @@ class Machining:
                 try:
                     # Oblong holes may require routing
                     if isinstance(feature, Oblong):
-                        if feature.distance > feature.diameter * gs.max_length_to_bit_diameter:
+                        limit = feature.diameter * gs.slot_peck_drilling.max_length_to_bit_diameter
+                        
+                        if feature.distance > limit:
                             # Route using a single stroke
                             tool = RouterBit(feature.diameter)
                             tool_id = rack.request(tool)
@@ -227,17 +279,34 @@ class Machining:
         Optimize the travel from one machining to the next.
         The idea is to minimize the G0 travels.
         This is actually a well known - and suprisingly - complex subject known
-        as the Traveling salesman problem.
+        as the Traveling Salesman Problem.
         A brute force approach defeats any computer very quickly as the number of
-        combination of this symetric case is (n-1)!/2. So a 100 hole PCB (think vias)
-        would create 4.6e155 combinations.
-        So heuristic algorithms are used instead. The simplest one consist in visiting
-        the closest hole next - turns out to be > 90% efficient.
+        combination of this case is (n-1)!/2 - that's 5e155 combinations for 100 holes.
+        So heuristic algorithms are used instead. The simplest one, consist in moving to
+        the closest hole next, turns out to be > 90% efficient.
         Here, we rely on numpy and a TSP library to do the hard work - so we're
-        likely better than 90% - with a quick compute time.
-        For the router parts, we create a paths with 0 cost and still use the same TSP
-        algo as the routed vector do not cost time (it must be done!).
+        likely better than 90% - whilst keeping the compute time under control.
+        For the router parts, we use a trick where the routed path (start to end) have 0 cost
+        in the graph, allowing for one algo fits all approach.
         """
+        def get_distance_matrix(coordinates):
+            """ Create a matrix of all distance using numpy """
+            num_coords = len(coordinates)
+            distance_matrix = np.zeros((num_coords, num_coords))
+
+            for i in range(num_coords):
+                for j in range(i + 1, num_coords):
+                    if i in segments and j == i + 1:
+                        distance = 0
+                    else:
+                        distance = np.linalg.norm(np.array(coordinates[i]) - np.array(coordinates[j]))
+
+                    # Assign distance to both (i, j) and (j, i) positions in the matrix
+                    distance_matrix[i, j] = distance
+                    distance_matrix[j, i] = distance
+
+            return distance_matrix
+        
         # Apply TSP to each tool
         for tool_id, tool_ops in self.tools_to_ops.items():
             # Create a matrix of travels with cost
@@ -259,7 +328,8 @@ class Machining:
                     final_ops.append(NoOperation())
                     
             # Apply TSP
-            permutation = optimize_travel(coordinates, segments)
+            distance_matrix = get_distance_matrix(coordinates)
+            permutation, _ = solve_tsp_dynamic_programming(distance_matrix)
             
             # Reorder, and drop the segments
             tool_ops.clear()
