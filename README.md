@@ -18,6 +18,7 @@ $ pip install pcb2gcode
 
 ## Usage
 
+```
 Usage: pcb2gcode [OPTIONS] FILENAME
 
   A utility which take a KiCAD v7 PCB and creates the GCode for a CNC to drill
@@ -32,6 +33,7 @@ Options:
   -a, --all              Do all operations
   -o, --output FILENAME  Specify an output file name. Defaults to stdout
   --help                 Show this message and exit.
+```
 
 ## Contributing
 
