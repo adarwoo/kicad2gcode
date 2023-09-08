@@ -3,8 +3,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# C extensions
-*.so
+# C extensions - Keep for pcbnew
+#*.so
 
 # Distribution / packaging
 .Python
