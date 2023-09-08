@@ -9,6 +9,35 @@ It aims to be used in 3 different ways:
 
 **NOTE**: THIS IS WORK IN PROGRESS. It is activelly being developped but is not completed.
 
+## Features
+
+### Support for ATC and manual tool change
+Save you racks and reuse them. Get clear instructions for the minimum change required.
+Racks are optimized to minimise the number of tool changes and always sorted.
+Racks can have broken slots too.
+Holes can be drilled or routed.
+Get rack composition clearly layed out for you.
+
+### Custom shop tools
+Define you cutting tools on hand and let the software work it out for you.
+It uses your tolerance to optimise the work.
+
+### Optimized machining
+Travelling Salesman Problem applied throughout to minimise traveling time.
+This is applied for drilling and routing.
+
+### Support for different units
+Versed in all unit systems, you can use the unit you prefer. This can be
+used throughout the configuration. The units used are kept throughout.
+Imperial can also be expressed in fractions, with the fractions kept in the display.
+
+### Manufacturer's data
+The configuration comes with manufacturing data to optimize the experience for
+each cutting tool.
+The software can extrapolate the manufacturing data for in-between sizes.
+The generated code optimised the feed rate and spindle speed based on the
+manufacturing data and the CNC capability.
+
 ## Installation
 
 The intent is to host it on pip -that's outstanding too.
