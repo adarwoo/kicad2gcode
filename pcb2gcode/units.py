@@ -56,10 +56,10 @@ class Quantity:
         elif isinstance(value, Quantity):
             assert(value.base_unit.__type__ == base_unit.__type__)
             self._value = value(base_unit)
-            self._raw = str(self._value)
+            self._raw = str(round_significant(self._value))
         else:
             self._value = value
-            self._raw = str(value)
+            self._raw = str(round_significant(value))
 
         # Bares the Unit type
         self.base_unit = base_unit
@@ -141,8 +141,7 @@ class Quantity:
         if isinstance(other, (int, float)):
             return operator(self.value, other)
         elif isinstance(other, Quantity):
-            converted_other = other(self.base_unit)
-            return operator(fround(self.value), fround(converted_other))
+            return operator(fround(self.base), fround(other.base))
         else:
             raise TypeError("Unsupported operation type")
 
@@ -290,7 +289,7 @@ class Rpm(Unit):
     __default__ = "rpm"
 
 # Define unit objects
-nm = Length("um", 1)
+nm = Length("nm", 1)
 um = Length("um", 1000)
 mm = Length("mm", 1000000)
 cm = Length("cm", 10000000)

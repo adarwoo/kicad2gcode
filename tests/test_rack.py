@@ -51,4 +51,46 @@ def test_atc():
    assert r.get_tool(4).diameter == 1.9*mm
    assert r.get_tool(1).diameter == 0.8*mm and r.get_tool(1).type is RouterBit
 
+def test_sort():
+   r = Rack()
 
+   r.add_bit(DrillBit(1.8*mm))
+   r.add_bit(RouterBit(0.8*mm))
+   r.add_bit(DrillBit(1.9*mm))
+   r.add_bit(DrillBit(2.6*mm))
+   r.add_bit(RouterBit(1.8*mm))
+   r.add_bit(DrillBit(0.9*mm))
+   r.add_bit(RouterBit(1.2*mm))
+   
+   r.sort()
+   
+   assert r.get_tool(1).diameter == 0.9*mm and r.get_tool(1).type is DrillBit
+   assert r.get_tool(2).diameter == 1.8*mm and r.get_tool(2).type is DrillBit
+   assert r.get_tool(3).diameter == 1.9*mm and r.get_tool(3).type is DrillBit
+   assert r.get_tool(4).diameter == 2.6*mm and r.get_tool(4).type is DrillBit
+   assert r.get_tool(5).diameter == 0.8*mm and r.get_tool(5).type is RouterBit
+   assert r.get_tool(6).diameter == 1.2*mm and r.get_tool(6).type is RouterBit
+   assert r.get_tool(7).diameter == 1.8*mm and r.get_tool(7).type is RouterBit
+  
+
+def test_sort2():
+   r = Rack(5)
+   r.invalidate_slot(4)
+
+   # Set tool #2
+   r.add_bit(DrillBit(0.85*mm), 2)
+
+   # Add another. Should be in slot 3
+   r.add_bit(DrillBit(1.8*mm))
+   # Skip 4 to go into 5
+   r.add_bit(DrillBit(1.9*mm))
+   # And 1
+   r.add_bit(DrillBit(0.55*mm))
+   
+   r.sort()
+   
+   assert r.get_tool(1).diameter == 0.55*mm
+   assert r.get_tool(2).diameter == 0.85*mm
+   assert r.get_tool(3).diameter == 1.8*mm
+   assert r.get_tool(4) == None
+   assert r.get_tool(5).diameter == 1.9*mm

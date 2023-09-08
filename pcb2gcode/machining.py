@@ -109,10 +109,10 @@ class MachiningOperation:
         Group operations in the same cycle
         These will not be optimized through the TSP algo.
         """
-        next = self
-        while next.next_op:
-            next = self.next_op
-        next.next_op = next
+        to_next = self
+        while to_next.next_op:
+            to_next = self.next_op
+        to_next.next_op = next
         
     def get_end_coordinate(self, first=True):
         """
@@ -134,6 +134,10 @@ class MachiningOperation:
         
     def to_gcode_last(self, stream: BufferedIOBase):
         """ Chance to end a canned cycle """
+        
+    def __lt__(self, other):
+        """ Override to sort by tool type """
+        return self.tool < other.tool
 
 
 class NoOperation(MachiningOperation):
@@ -193,6 +197,9 @@ class Machining:
         Compile a list of all machining operations required.
         Use an umlimited rack to start with.
         You must call use_rack to finalised the operations
+        
+        Returns the default rack required. This rack can be used to merge
+        with a specified rack. Internal operations are based on this rack.
         """
         # Start with an open rack (no tools and unlimited)
         rack = Rack()
@@ -212,7 +219,6 @@ class Machining:
                             tool = RouterBit(feature.diameter)
                             tool_id = rack.request(tool)
                             self.ops.append(
-                                tool_id,
                                 RouteVector(LinearMove(feature.coord, feature.end), tool)
                             )
 
@@ -223,15 +229,15 @@ class Machining:
                             # Start by drilling start and end
                             op = DrillHole(feature.coord, tool)
                             op.then(DrillHole(feature.end, tool))
-                            self.ops.append(tool_id, op)
+                            self.ops.append(op)
                             
                             # Drill intermediate
-                            x1, y1 = feature.coord
-                            x2, y2 = feature.end
+                            x1, y1 = feature.coord()
+                            x2, y2 = feature.end()
                             l = tool.diameter / gs.slot_peck_drilling.pecks_per_hole
 
                             distance = ((x2 - x1)**2 + (y2 - y1)**2)**0.5
-                            total_points = int(distance / l)
+                            total_points = int((distance / l).value)
 
                             for i in range(1, total_points + 1):
                                 ratio = i / total_points
@@ -252,7 +258,10 @@ class Machining:
                         raise RuntimeError
                 except ValueError:
                     logger.error("No solution exist for a tool request")
-                    
+
+        # Reorder the rack prior to returning it
+        rack.sort()
+        
         # Map the operation to our unlimited rack for now
         self.use_rack(rack)
 
@@ -264,6 +273,8 @@ class Machining:
         Give a rack to use. The rack should have all tools required.
         This creates a non-optimized sorted list of operation based on tool type and diameter.
         The drills go first, smallest to largest bit. Then the routers.
+        This operation is necessary to assign a tool number to the machining operation now
+        the rack is known.
         """
         # Reset the ops
         self.tools_to_ops = OrderedDict()
@@ -308,7 +319,7 @@ class Machining:
             return distance_matrix
         
         # Apply TSP to each tool
-        for tool_id, tool_ops in self.tools_to_ops.items():
+        for tool_ops in self.tools_to_ops.values():
             # Create a matrix of travels with cost
             # Router are specials in than they have a zero cost to go from A to B
             coordinates = []

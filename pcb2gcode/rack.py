@@ -8,6 +8,7 @@
 # Complex number are used where real part is a drill bit and the imaginary a router
 from collections import OrderedDict
 from typing import List
+from operator import itemgetter
 
 from .config import global_settings as gs
 from .cutting_tools import CuttingTool, DrillBit, RouterBit
@@ -39,8 +40,10 @@ class Rack:
     """
     Defines a rack object which behaves like a list of cutting tools and
     a dict to locate bits.
-    A rack always has a size. If the size is 0, the rack is manual adn can grow
-    without limits
+    A rack always has a size. If the size is 0, the rack is manual and can grow
+    without limits.
+    To access a tool, always use the get_tool accessor which is indexed from 1.
+    Standard List function are zero indexed.
     """
     def __init__(self, size=0):
         """
@@ -53,19 +56,23 @@ class Rack:
         self.invalid_slot = set()
 
     def __getitem__(self, key):
-        return self.rack[key - 1]
+        return self.rack[key]
 
     def __setitem__(self, key, value):
-        self.rack[key - 1] = value
+        self.rack[key] = value
 
     def __delitem__(self, key):
-        del self.rack[key - 1]
+        del self.rack[key]
 
     def __contains__(self, key):
         return key in self.rack
 
     def __len__(self):
         return len(self.rack)
+    
+    @property
+    def is_manual(self):
+        return self.size == 0
 
     def clone(self, unbound=True):
         """ @returns A deep copy of the rack, unbound in size """
@@ -220,12 +227,38 @@ class Rack:
         
         # Locate in this rack
         for tool, slot in self.items():
-            if tool == what:
+            if tool == retval:
                 return slot
-        
+
         # Not found add it
         return self.add_bit(retval)
 
+    def sort(self):
+        """
+        Reorganise the rack by tool type and diameter
+        """
+        if self.is_manual:
+            self.rack.sort()
+        else:
+            # Create an empty and unlimited rack
+            newrack = []
+            for bit in self.rack:
+                if bit:
+                    newrack.append(bit)
+                    
+            # Sort it
+            newrack.sort()
+            
+            # Reset the rack
+            self.rack = [None] * self.size
+            
+            # Put sorted elements in
+            index = 0
+            for bit in newrack:
+                while (index+1) in self.invalid_slot:
+                    index += 1
+                self.rack[index] = bit
+                index+=1
 
     def __repr__(self):
         rack_str = ""
@@ -298,8 +331,4 @@ class RackManager:
     def get_rack(self):
         """ @return A deep copy of the current rack """
         return self.rack.clone(False)
-    
-    @property
-    def is_manual(self):
-        return self.size == 0
 

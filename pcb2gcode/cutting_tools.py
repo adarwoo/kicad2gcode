@@ -5,12 +5,15 @@ from enum import IntEnum
 from logging import getLogger
 from math import tan, radians
 
+# pylint: disable=E0611 # The module is fully dynamic
 from .config import global_settings as gs
+# pylint: disable=E0611 # The module is fully dynamic
 from .config import machining_data as md
+# pylint: disable=E0611 # The module is fully dynamic
 from .config import stock
 
 from .utils import interpolate_lookup, round_significant
-from .units import rpm, FeedRate, Unit, Length
+from .units import rpm, FeedRate, Unit, Length, degree
 
 
 logger = getLogger(__name__)
@@ -18,10 +21,12 @@ logger = getLogger(__name__)
 # Multiple the diameter by this number to find the length of the tip of the bit
 HEIGHT_TO_DIA_RATIO = tan(radians((180-gs.drillbit_point_angle())/2))
 
+# Maximum depth allowed into the matyt board
+MAX_DEPTH_ALLOWED = gs.backboard_thickness - gs.safe_distance - gs.exit_depth_min
+
 # Compute the largest drillbit size where there is enough clearance in the backing board for
 #  the point to exit cleanly
-MAX_DRILLBIT_DIAMETER_FOR_CLEAN_EXIT = \
-    (gs.backboard_thickness - gs.safe_distance - gs.exit_depth_min) / HEIGHT_TO_DIA_RATIO
+MAX_DRILLBIT_DIAMETER_FOR_CLEAN_EXIT = MAX_DEPTH_ALLOWED / HEIGHT_TO_DIA_RATIO
 
 
 class CutDir(IntEnum):
@@ -200,12 +205,11 @@ class CuttingTool:
             # But to do so - since the router dia can be any smaller size
             # - we need to wait for the drill rack to be completed
             exit_depth_required = \
-                HEIGHT_TO_DIA_RATIO * normalized_size_tool.diameter + gs.exit_depth_min
+                gs.exit_depth_min + HEIGHT_TO_DIA_RATIO * normalized_size_tool.diameter
 
-            self.warn(
-                f"Exit depth required {exit_depth_required}",
-                f"is greater than the depth allowed {gs.exit_depth_min}"
-                "Switching to routing"
+            logger.warning(
+                "Exit depth required %s is greater than the max depth allowed %s\n"
+                "Switching to routing", exit_depth_required, MAX_DEPTH_ALLOWED
             )
 
             return route_holes(normalized_size_tool)
@@ -214,9 +218,6 @@ class CuttingTool:
 
     def __hash__(self) -> int:
         return self.diameter.__hash__()
-
-    def __eq__(self, other):
-        return self.type is other.type and self.diameter == other.diameter
 
 
 class DrillBit(CuttingTool):
@@ -247,6 +248,7 @@ class RouterBit(CuttingTool):
         self.z_feedrate = self.interpolate("z_feed")
         self.table_feed = self.interpolate("table_feed")
         self.exit_depth = self.interpolate("exit_depth")
+        self.tip_angle = 180*degree
 
     def __repr__(self) -> str:
         return f"{self.diameter} {self.rpm} zfeed:{self.z_feedrate} feed:{self.table_feed}"

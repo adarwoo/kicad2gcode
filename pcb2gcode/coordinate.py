@@ -1,3 +1,4 @@
+from typing import Tuple
 from numpy import array
 
 class Coordinate:
@@ -13,3 +14,6 @@ class Coordinate:
     def __array__(self):
         """ @return a numpy array using the base unit conversion """
         return array([self.x.base, self.y.base])
+    
+    def __call__(self) -> Tuple[int, int]:
+        return [self.x.base, self.y.base]
