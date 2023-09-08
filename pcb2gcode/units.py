@@ -112,7 +112,7 @@ class Quantity:
         return self.__mul__(other)
 
     def __rtruediv__(self, other):
-        return self.__div__(other)
+        return self.__truediv__(other)
 
     def __add__(self, other):
         if isinstance(other, Quantity):
@@ -130,6 +130,9 @@ class Quantity:
 
     def __abs__(self):
         return Quantity(abs(self._value), self.base_unit)
+    
+    def __pow__(self, exponent):
+        return Quantity(self.value ** exponent, self.base_unit)
 
     def __repr__(self):
         return f"{self._raw}{self.base_unit.name}"

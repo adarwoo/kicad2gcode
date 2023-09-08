@@ -106,6 +106,8 @@ class Rack:
          starts with the first available slot from the right
         Raise: ValueError if the rack is full
         """
+        retval = None
+        
         if self.size:
             if position is None:
                 position = self.find_free_position()
@@ -129,9 +131,13 @@ class Rack:
                 )
 
         if self.size:
-            self.rack[position - 1] = bit
+            retval = position - 1
+            self.rack[retval] = bit
         else:
             self.rack.append(bit)
+            retval = len(self.rack)
+            
+        return retval
 
     def merge(self, rack) -> List[RackSetupOp]:
         """
@@ -204,6 +210,7 @@ class Rack:
 
         Args:
             what (CuttingTool): A cutting tool
+        @returns The ID of the slot
         """
         # Grab a standard cutting tool
         retval = CuttingTool.request(what)

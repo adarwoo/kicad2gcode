@@ -1,7 +1,3 @@
-from pathlib import Path
-
-#from pcb2gcode.pcb_inventory import Inventory
-#from pcb2gcode.machining import Machining, Operations
 from pcb2gcode.rack import RackManager
 from pcb2gcode.pcb_inventory import Inventory
 from pcb2gcode.utils import Coordinate

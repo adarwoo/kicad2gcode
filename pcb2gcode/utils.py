@@ -1,21 +1,18 @@
-from typing import List, Tuple, Dict
+"""
+Common utilities
+"""
 import bisect
+from typing import List, Tuple, Set
+import numpy as np
+from python_tsp.exact import solve_tsp_dynamic_programming
 
+from .coordinate import Coordinate
 
-class Coordinate:
-    """
-    Helper object to store coordinates which could be visited
-    to be later rendered using different offset and scale.
-    """
-    def __init__(self, x: int, y: int):
-        """ Construct using int """
-        self.x = x
-        self.y = y
 
 def round_significant(number, significant_digits=4):
+    """ @return A rounded number """
     rounded = float("{:.{}g}".format(number, significant_digits))
     return int(rounded) if rounded.is_integer() else rounded
-
 
 def interpolate_lookup(table, value):
     """
@@ -47,25 +44,26 @@ def interpolate_lookup(table, value):
 
     return interpolated_values
 
-def optimize_travel(coordinates: List[Tuple[int,int]]) -> List[int]:
+def optimize_travel(coordinates: List[Coordinate], segments: Set[Tuple(int, int)]=[]) -> List[int]:
     """
     Apply the Travelling Salesman Problem to the positions
     the CNC will visit.
-    @param coordinates A list of (x,y) coordinates to visit
-    @returns A list containing the ordered position of each coordinate to visit
+    @param coordinates: A list of coordinates to visit
+    @param segments: Segments in the list. Holds a pair of indexes in the coordinates which
+                     represents the segment. A segment has a traveling cost of 0
+    @returns The permutation list
     """
-    from python_tsp.exact import solve_tsp_dynamic_programming
-
     def get_distance_matrix(coordinates):
         """ Create a matrix of all distance using numpy """
-        import numpy as np
-
         num_coords = len(coordinates)
         distance_matrix = np.zeros((num_coords, num_coords))
 
         for i in range(num_coords):
             for j in range(i + 1, num_coords):
-                distance = np.linalg.norm(np.array(coordinates[i]) - np.array(coordinates[j]))
+                if (i, j) in segments or (j, i) in segments:
+                    distance = 0
+                else:
+                    distance = np.linalg.norm(np.array(coordinates[i]) - np.array(coordinates[j]))
 
                 # Assign distance to both (i, j) and (j, i) positions in the matrix
                 distance_matrix[i, j] = distance
@@ -77,14 +75,11 @@ def optimize_travel(coordinates: List[Tuple[int,int]]) -> List[int]:
 
     if coordinates:
         distance_matrix = get_distance_matrix(coordinates)
-        permutation, distance = solve_tsp_dynamic_programming(distance_matrix)
-        retval = [coordinates[i] for i in permutation]
+        permutation, _ = solve_tsp_dynamic_programming(distance_matrix)
 
-    return retval
+    return permutation
 
 def interpolate_points(start: Coordinate, end: Coordinate, spacing):
-    import numpy as np
-
     # Convert the start and end points to NumPy arrays
     start_point = np.array(start)
     end_point = np.array(end)

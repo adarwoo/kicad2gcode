@@ -3,7 +3,7 @@ from typing import List, Tuple
 from math import radians, cos, sin, sqrt
 
 from .units import um, degree
-from .utils import Coordinate
+from .coordinate import Coordinate
 from .operations import Operations
 
 
@@ -25,11 +25,11 @@ class Hole(Feature):
         # To be added by the machining
         self.tool_id = 0
 
-    # def __repr__(self) -> str:
-    #     return str(self)
+    def __repr__(self) -> str:
+        return str(self)
 
-    # def __str__(self):
-    #     return f"{self.diameter} ({self.coord.x}, {self.coord.y})"
+    def __str__(self):
+        return f"{self.diameter} ({self.coord.x}, {self.coord.y})"
 
 
 class Oblong(Hole):

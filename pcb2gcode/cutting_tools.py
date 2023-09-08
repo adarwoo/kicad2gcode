@@ -32,9 +32,16 @@ class CutDir(IntEnum):
 
 
 class CuttingTool:
+    """Abstract base class for all cutting tools"""
+    
     # Name of the stock in the config["stock"]
     __stockname__ = None
+    
+    # If True, allow for the tool to be larger than the specification
     allow_bigger = False
+    
+    # Order when sorted. Override to set the order during machining. Lowest go first.
+    order = 0
 
     def __init__(self, diameter: Length, mfg_data):
         self.type = self.__class__
@@ -54,6 +61,13 @@ class CuttingTool:
         
     def __eq__(self, other):
         return self.type is other.type and self.diameter == other.diameter
+    
+    def __lt__(self, other):
+        """Override to allow sorting cutting tools by type and order"""
+        if self.__class__.order == other.__class__.order:
+            return self.diameter < other.diameter
+        
+        return self.__class__.order < other.__class__.order
 
     def interpolate(self, what):
         """ Using the manufactuing table and the diameter, interpolate a data """
@@ -135,29 +149,45 @@ class CuttingTool:
                 return normalized_size_tool
 
             # No suitable router bit found - Game over
-            logger.error(f"No suitable routerbit exits in the stock to cut a hole of {cutting_tool.diameter}.")
+            logger.error(
+                "No suitable routerbit exits in the stock to cut a hole of %s.",
+                cutting_tool.diameter
+            )
 
             return None
 
         if normalized_size_tool is None:
             if cutting_tool.diameter < cutting_tool.get_stock_size_range()[0]:
                 # Size is too small and not supported
-                logger.warning(f"Cutting tool size: {cutting_tool.diameter} is too small")
+                logger.warning(
+                    "Cutting tool size: %s is too small", cutting_tool.diameter
+                )
+                
                 return None
 
             # Else - it is too big
             if cutting_tool.diameter > cutting_tool.get_stock_size_range()[1]:
                 if cutting_tool.type is RouterBit:
                     # Size is too large
-                    logger.error(f"Cutting tool size: {cutting_tool.diameter} exceed largest stock bit")
+                    logger.error(
+                        "Cutting tool size: %s exceed largest stock bit",
+                        cutting_tool.diameter
+                    )
+                    
                     return None
                 else:
-                    logger.info(f"Cutting tool size: {cutting_tool.diameter} exceed largest bit and will be routed")
+                    logger.info(
+                        "Cutting tool size: %s exceed largest bit and will be routed",
+                        cutting_tool.diameter
+                    )
+                    
                     return route_holes()
 
             # Else, it is not matched (tolerances and too tight)
             if cutting_tool.type is RouterBit:
-                logger.error(f"No suitable routerbit found for this size: {cutting_tool.diameter}")
+                logger.error(
+                    "No suitable routerbit found for this size: %s", cutting_tool.diameter
+                )
                 logger.info("Consider increasing over and under size tolerances")
 
             # Try to route it!
@@ -191,6 +221,7 @@ class CuttingTool:
 
 class DrillBit(CuttingTool):
     __stockname__ = "drillbits"
+    order = 1
 
     def __init__(self, diameter):
         super().__init__(diameter, md.drillbits)
@@ -206,6 +237,7 @@ class DrillBit(CuttingTool):
 
 class RouterBit(CuttingTool):
     __stockname__ = "routerbits"
+    order = 2
 
     def __init__(self, diameter):
         super().__init__(diameter, md.routerbits)

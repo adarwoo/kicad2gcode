@@ -7,7 +7,7 @@ from pathlib import Path
 from math import radians, cos, sin
 from logging import getLogger
 
-from .utils import Coordinate
+from .coordinate import Coordinate
 from .units import nm, degree
 from .pcb_inventory import Inventory
 
