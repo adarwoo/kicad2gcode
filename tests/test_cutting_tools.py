@@ -25,6 +25,7 @@ from pcb2gcode.config import stock
 def test_basic():
     """ Test internals of a drill and router bits """
     # Set machining data so we can validate independantly
+    # These are rounded to 4 digits
     DrillBit.__mfg_data__.data[2.0] = [11110, 12000]
 
     db = DrillBit(2.0 * mm)

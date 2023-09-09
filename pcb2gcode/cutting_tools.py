@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
+
+# pylint: disable=W0106 # Clean construct for logging
 """
 Defines cutting tools objects as a hierachy for absreact handling
 """
@@ -102,7 +104,9 @@ class CuttingTool:
         """ Using the manufactuing table and the diameter, interpolate a data """
         index = self.__class__.__mfg_data__.fields[1].index(what)
         unit = Unit.get_unit(self.__class__.__mfg_data__.units[1][index])
-        return unit(round_significant(self.interpolated_data[index]))
+
+        # Round interpolated data since the precision does not matter here
+        return unit(round_significant(self.interpolated_data[index], 4))
 
     @classmethod
     def get_from_stock(cls, diameter):
@@ -158,7 +162,7 @@ class CuttingTool:
         return self.get_from_stock(self.diameter)
 
     @staticmethod
-    def request(cutting_tool):
+    def request(cutting_tool, warn=True):
         """
         Requests a cutting tool from the standard size
         May return a routerbit for drilling holes if that's the only option
@@ -178,7 +182,7 @@ class CuttingTool:
                 return normalized_size_tool
 
             # No suitable router bit found - Game over
-            logger.error(
+            warn and logger.error(
                 "No suitable routerbit exits in the stock to cut a hole of %s.",
                 cutting_tool.diameter
             )
@@ -188,7 +192,7 @@ class CuttingTool:
         if normalized_size_tool is None:
             if cutting_tool.diameter < cutting_tool.get_stock_size_range()[0]:
                 # Size is too small and not supported
-                logger.warning(
+                warn and logger.error(
                     "Cutting tool size: %s is too small", cutting_tool.diameter
                 )
 
@@ -198,14 +202,14 @@ class CuttingTool:
             if cutting_tool.diameter > cutting_tool.get_stock_size_range()[1]:
                 if cutting_tool.type is RouterBit:
                     # Size is too large
-                    logger.error(
+                    warn and logger.error(
                         "Cutting tool size: %s exceed largest stock bit",
                         cutting_tool.diameter
                     )
 
                     return None
                 else:
-                    logger.info(
+                    warn and logger.info(
                         "Cutting tool size: %s exceed largest bit and will be routed",
                         cutting_tool.diameter
                     )
@@ -214,10 +218,10 @@ class CuttingTool:
 
             # Else, it is not matched (tolerances and too tight)
             if cutting_tool.type is RouterBit:
-                logger.error(
+                warn and logger.error(
                     "No suitable routerbit found for this size: %s", cutting_tool.diameter
                 )
-                logger.info("Consider increasing over and under size tolerances")
+                warn and logger.info("Consider increasing over and under size tolerances")
 
             # Try to route it!
             return route_holes()
@@ -231,9 +235,14 @@ class CuttingTool:
             exit_depth_required = \
                 gs.exit_depth_min + HEIGHT_TO_DIA_RATIO * normalized_size_tool.diameter
 
-            logger.warning(
+            warn and logger.warning(
+                "%s %s - normalized to: %s has an excessive exit depth.\n"
                 "Exit depth required %s is greater than the max depth allowed %s\n"
-                "Switching to routing", exit_depth_required, MAX_DEPTH_ALLOWED
+                "Switching to routing the hole instead",
+                cutting_tool.__stockname__,
+                cutting_tool.diameter,
+                normalized_size_tool.diameter,
+                exit_depth_required, MAX_DEPTH_ALLOWED
             )
 
             return route_holes(normalized_size_tool)

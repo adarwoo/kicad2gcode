@@ -233,7 +233,7 @@ class Rack:
 
         return retval
 
-    def request(self, what: CuttingTool):
+    def request(self, what: CuttingTool, warn=True):
         """
         Request a cutting tool from the rack.
         The tool is first standardized, then searched in the rack.
@@ -244,7 +244,7 @@ class Rack:
         @returns The ID of the slot
         """
         # Grab a standard cutting tool
-        retval = CuttingTool.request(what)
+        retval = CuttingTool.request(what, warn)
 
         if not retval:
             raise ValueError("Cannot get bit size from stock")
