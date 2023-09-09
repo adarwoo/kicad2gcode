@@ -1,9 +1,46 @@
-#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
 #
-# If a file does not exist, create it and load it.
-# The default path
+# This file is part of the pcb2gcode distribution (https://github.com/adarwoo/pcb2gcode).
+# Copyright (c) 2023 Guillaume ARRECKX (software@arreckx.com).
+# 
+# This program is free software: you can redistribute it and/or modify  
+# it under the terms of the GNU General Public License as published by  
+# the Free Software Foundation, version 3.
 #
+# This program is distributed in the hope that it will be useful, but 
+# WITHOUT ANY WARRANTY; without even the implied warranty of 
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU 
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License 
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
+
+"""
+Generic configuration management class.
+
+The configurations are all specified in the local 'schema' subdirectory.
+The schema is written in Yaml, provides:
+ 1 - The schema to validate a Yaml configuration file
+ 2 - The default values, so a default file can be created from the schema
+ 3 - The full description and documentation of the schema
+ 4 - Some 'unit' metadata to provide type conversion
+
+All constants are imported from the constants module.
+
+By default, if a file does not exist, the YamlConfigManager will create it.
+If a file does not parse and does not meet the schema, it is renamed and a 
+default is created instead. If the file creation fails, the manager still
+creates the internal set of data.
+
+The idea is to always allow the application to start with default data if required.
+
+This config manager relies on the ruamel.yaml package which allow preserving the
+comments and also round-trip files.
+The application can make changes to a configuration which can later be saved
+back with the comments preserved.
+"""
 import jsonschema
 import logging
 import sys

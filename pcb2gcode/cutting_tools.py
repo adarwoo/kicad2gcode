@@ -1,4 +1,24 @@
-#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+#
+# This file is part of the pcb2gcode distribution (https://github.com/adarwoo/pcb2gcode).
+# Copyright (c) 2023 Guillaume ARRECKX (software@arreckx.com).
+# 
+# This program is free software: you can redistribute it and/or modify  
+# it under the terms of the GNU General Public License as published by  
+# the Free Software Foundation, version 3.
+#
+# This program is distributed in the hope that it will be useful, but 
+# WITHOUT ANY WARRANTY; without even the implied warranty of 
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU 
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License 
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
+""" 
+Defines cutting tools objects as a hierachy for absreact handling
+"""
 
 # Cutting tools for the CNC
 from enum import IntEnum
@@ -30,10 +50,11 @@ MAX_DRILLBIT_DIAMETER_FOR_CLEAN_EXIT = MAX_DEPTH_ALLOWED / HEIGHT_TO_DIA_RATIO
 
 
 class CutDir(IntEnum):
-    UNKWOWN = 0
-    UP = 1
-    DOWN = 2
-    UPDOWN = 3
+    """ A Enum type to store the type of cut of a cutting tool. """
+    UNKWOWN = 0 # Not known
+    UP = 1      # Upcut. Chips are drawn upwards. Fine for drilling.
+    DOWN = 2    # Pushes the shavings down
+    UPDOWN = 3  # Also known as compression bit
 
 
 class CuttingTool:
