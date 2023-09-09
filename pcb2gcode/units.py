@@ -329,7 +329,7 @@ _in = Length("in", 25400000)
 # Define feedrate units
 mm_min = FeedRate("mm/min", 1)
 cm_min = FeedRate("cm/min", 10)
-m_min = FeedRate("m/min", 100)
+m_min = FeedRate("m/min", 1000)
 in_min = FeedRate("in/min", 25.4)
 ipm = FeedRate("ipm", 25.4)
 inch_min = FeedRate("inch/min", 25.4)

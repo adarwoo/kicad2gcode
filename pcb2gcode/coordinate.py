@@ -30,6 +30,7 @@ class Coordinate:
     Helper object to store coordinates which could be visited
     to be later rendered using different offset and scale.
     """
+    # pylint: disable=C0103 # Keeping x and y for clarity
     def __init__(self, x: Any, y: Any):
         """ Construct with Length objects """
         self.x = x

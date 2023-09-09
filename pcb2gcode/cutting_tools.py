@@ -3,20 +3,20 @@
 #
 # This file is part of the pcb2gcode distribution (https://github.com/adarwoo/pcb2gcode).
 # Copyright (c) 2023 Guillaume ARRECKX (software@arreckx.com).
-# 
-# This program is free software: you can redistribute it and/or modify  
-# it under the terms of the GNU General Public License as published by  
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, version 3.
 #
-# This program is distributed in the hope that it will be useful, but 
-# WITHOUT ANY WARRANTY; without even the implied warranty of 
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU 
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
 # General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License 
+# You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
-""" 
+"""
 Defines cutting tools objects as a hierachy for absreact handling
 """
 
@@ -59,46 +59,49 @@ class CutDir(IntEnum):
 
 class CuttingTool:
     """Abstract base class for all cutting tools"""
-    
+
     # Name of the stock in the config["stock"]
     __stockname__ = None
-    
-    # If True, allow for the tool to be larger than the specification
-    allow_bigger = False
-    
-    # Order when sorted. Override to set the order during machining. Lowest go first.
-    order = 0
 
-    def __init__(self, diameter: Length, mfg_data):
+    # If True, allow for the tool to be larger than the specification
+    __allow_oversizing__ = False
+
+    # Points the manufacturing data for the tool
+    __mfg_data__ = None
+
+    # __order__ when sorted. Override to set the __order__ during machining. Lowest go first.
+    __order__ = 0
+
+    def __init__(self, diameter: Length):
         self.type = self.__class__
         self.diameter = diameter
-        self.mfg_data = mfg_data
         self.tip_angle = gs.drillbit_point_angle
         self.cut_direction = CutDir.UNKWOWN
         self.rpm = rpm(0)
         self.z_feedrate = FeedRate.from_scalar(0)
         # If True, allow for larger sizes. OK for a drillbit, but not for a routerbit
-        self.allow_bigger=False
+        self.__allow_oversizing__=False
 
         # Grab a set of interpolated data
-        key_unit = Unit.get_unit(self.mfg_data.units[0])
+        key_unit = Unit.get_unit(self.__mfg_data__.units[0])
         scalar_value = self.diameter(key_unit)
-        self.interpolated_data = interpolate_lookup(self.mfg_data.data, scalar_value)
-        
+        self.interpolated_data = interpolate_lookup(
+            self.__class__.__mfg_data__.data, scalar_value)
+
     def __eq__(self, other):
         return self.type is other.type and self.diameter == other.diameter
-    
+
     def __lt__(self, other):
-        """Override to allow sorting cutting tools by type and order"""
-        if self.__class__.order == other.__class__.order:
+        """Override to allow sorting cutting tools by type and __order__"""
+        if self.__class__.__order__ == other.__class__.__order__:
             return self.diameter < other.diameter
-        
-        return self.__class__.order < other.__class__.order
+
+        return self.__class__.__order__ < other.__class__.__order__
 
     def interpolate(self, what):
         """ Using the manufactuing table and the diameter, interpolate a data """
-        index = self.mfg_data.fields[1].index(what)
-        unit = Unit.get_unit(self.mfg_data.units[1][index])
+        index = self.__class__.__mfg_data__.fields[1].index(what)
+        unit = Unit.get_unit(self.__class__.__mfg_data__.units[1][index])
         return unit(round_significant(self.interpolated_data[index]))
 
     @classmethod
@@ -108,35 +111,35 @@ class CuttingTool:
         The selection will involve the configuration
         @return A stock item object or None if no items could be matched
         """
-        v = min_so_far = diameter
+        variation = min_so_far = diameter
         nearest_diameter = None
 
         # Start with the largest bit - rational : A bigger hole will accomodate the part
         # In most cases, the plating (0.035 nominal) will make the hole smaller in the end
-        for s in reversed(sorted(stock.get(cls.__stockname__, []))):
-            lower = v - ((v * gs.downsizing_allowance_percent) / 100)
-            upper = v + ((v * gs.oversizing_allowance_percent) / 100)
+        for stock_size in reversed(sorted(stock.get(cls.__stockname__, []))):
+            lower = variation - ((variation * gs.downsizing_allowance_percent) / 100)
+            upper = variation + ((variation * gs.oversizing_allowance_percent) / 100)
 
             # Skip too large of a hole
-            if cls.allow_bigger:
-                if s > upper:
+            if cls.__allow_oversizing__:
+                if stock_size > upper:
                     continue
-            elif s > v:
+            elif stock_size > variation:
                 continue
 
             # Stop if too small - won't get better!
-            if s < lower:
+            if stock_size < lower:
                 break
 
             # Whole size is ok, promote if difference is less
-            if abs(v-s) < min_so_far:
-                min_so_far = abs(v-s)
+            if abs(variation-stock_size) < min_so_far:
+                min_so_far = abs(variation-stock_size)
 
                 if min_so_far == 0:
-                    nearest_diameter = s
+                    nearest_diameter = stock_size
                     break
 
-                nearest_diameter = s
+                nearest_diameter = stock_size
 
         return cls(nearest_diameter) if nearest_diameter else None
 
@@ -188,7 +191,7 @@ class CuttingTool:
                 logger.warning(
                     "Cutting tool size: %s is too small", cutting_tool.diameter
                 )
-                
+
                 return None
 
             # Else - it is too big
@@ -199,14 +202,14 @@ class CuttingTool:
                         "Cutting tool size: %s exceed largest stock bit",
                         cutting_tool.diameter
                     )
-                    
+
                     return None
                 else:
                     logger.info(
                         "Cutting tool size: %s exceed largest bit and will be routed",
                         cutting_tool.diameter
                     )
-                    
+
                     return route_holes()
 
             # Else, it is not matched (tolerances and too tight)
@@ -242,13 +245,15 @@ class CuttingTool:
 
 
 class DrillBit(CuttingTool):
+    """ A drillbit cutter """
     __stockname__ = "drillbits"
-    order = 1
+    __order__ = 1
+    __mfg_data__ = md.drillbits
 
     def __init__(self, diameter):
-        super().__init__(diameter, md.drillbits)
+        super().__init__(diameter)
         self.cut_direction = CutDir.UP
-        self.allow_bigger = True
+        self.__allow_oversizing__ = True
 
         self.rpm = self.interpolate("speed")
         self.z_feedrate = self.interpolate("z_feed")
@@ -258,11 +263,13 @@ class DrillBit(CuttingTool):
 
 
 class RouterBit(CuttingTool):
+    """ A routerbit cutter """
     __stockname__ = "routerbits"
-    order = 2
+    __order__ = 2
+    __mfg_data__ = md.routerbits
 
     def __init__(self, diameter):
-        super().__init__(diameter, md.routerbits)
+        super().__init__(diameter)
         self.cut_direction = CutDir.UPDOWN
 
         self.rpm = self.interpolate("speed")

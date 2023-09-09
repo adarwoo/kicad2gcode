@@ -3,17 +3,17 @@
 #
 # This file is part of the pcb2gcode distribution (https://github.com/adarwoo/pcb2gcode).
 # Copyright (c) 2023 Guillaume ARRECKX (software@arreckx.com).
-# 
-# This program is free software: you can redistribute it and/or modify  
-# it under the terms of the GNU General Public License as published by  
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, version 3.
 #
-# This program is distributed in the hope that it will be useful, but 
-# WITHOUT ANY WARRANTY; without even the implied warranty of 
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU 
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
 # General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License 
+# You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
@@ -30,7 +30,7 @@ The schema is written in Yaml, provides:
 All constants are imported from the constants module.
 
 By default, if a file does not exist, the YamlConfigManager will create it.
-If a file does not parse and does not meet the schema, it is renamed and a 
+If a file does not parse and does not meet the schema, it is renamed and a
 default is created instead. If the file creation fails, the manager still
 creates the internal set of data.
 
@@ -51,7 +51,7 @@ import ruamel.yaml
 from ruamel.yaml.comments import CommentedMap, CommentedSeq
 
 from .constants import CONFIG_USER_PATH, CONFIG_SECTIONS, \
-    SCHEMA_FILE__FILENAME_SUFFIX, SCHEMA_PATH
+    SCHEMA_FILE__FILENAME_SUFFIX, SCHEMA_PATH, YAML_FILE_RENAME_SUFFIX
 from .units import Unit
 from .bunch import bunchify
 
@@ -74,8 +74,8 @@ class YamlConfigManager:
             Tries to generates a new default content based on the schema file
      -      it returns the default content
     """
-    @staticmethod
-    def _populate_defaults(schema):
+    @classmethod
+    def _populate_defaults(cls, schema):
         retval = None
 
         if 'default' in schema:
@@ -86,7 +86,7 @@ class YamlConfigManager:
             default_obj = CommentedMap()
 
             for prop_name, prop_schema in schema.get('properties', {}).items():
-                default_value = __class__._populate_defaults(prop_schema)
+                default_value = cls._populate_defaults(prop_schema)
                 default_obj[prop_name] = default_value
 
             retval = default_obj
@@ -94,15 +94,15 @@ class YamlConfigManager:
             default_array = CommentedSeq()
 
             if 'items' in schema:
-                default_item = __class__._populate_defaults(schema['items'])
+                default_item = cls._populate_defaults(schema['items'])
                 default_array.append(default_item)
 
             retval = default_array
 
         return retval
 
-    @staticmethod
-    def _add_comments(node, schema, indent=0):
+    @classmethod
+    def _add_comments(cls, node, schema, indent=0):
         """
         Given the fully formed node, add comments using the schema description
         """
@@ -123,12 +123,11 @@ class YamlConfigManager:
                         isinstance(node[prop_name], CommentedMap) or
                         isinstance(node[prop_name], CommentedSeq)
                     ):
-                        __class__._add_comments(node[prop_name], prop_schema, indent+2)
+                        cls._add_comments(node[prop_name], prop_schema, indent+2)
 
         if 'type' in schema and schema['type'] == 'array':
             if 'items' in schema:
-                __class__._add_comments(node[0], schema['items'], indent+2)
-
+                cls._add_comments(node[0], schema['items'], indent+2)
 
     @staticmethod
     def convert_values_to_units(node, schema):
@@ -147,7 +146,7 @@ class YamlConfigManager:
                     else: # Scalar
                         if 'unit' in prop_schema:
                             match = RE_SPLIT_UNIT.match(prop_schema['unit'])
-                            assert(match)
+                            assert match, "The schema contains an invalid unit definition"
                             unit_cls = Unit.get_type(match.group("unit"))
                             defaults_to = match.group("defaults_to") or ""
                             # Override the value using a Quantity
@@ -165,7 +164,7 @@ class YamlConfigManager:
                     else: # Scalar
                         if 'unit' in schema:
                             match = RE_SPLIT_UNIT.match(schema['unit'])
-                            assert(match)
+                            assert match, "Check unit definition in the schema file"
                             unit_cls = Unit.get_type(match.group("unit"))
                             defaults_to = match.group("defaults_to") or ""
                             # Override the value using a Quantity
@@ -173,9 +172,10 @@ class YamlConfigManager:
                                 str(single), defaults_to)
 
     def load_schema(self):
-        import sys
-        from importlib import resources
-
+        """
+        Parse the schema and validate it
+        Returns; The schema object and the validator
+        """
         self.schema_file_path = SCHEMA_PATH / Path(self.section_name + SCHEMA_FILE__FILENAME_SUFFIX)
 
         if not self.schema_file_path.exists():
@@ -195,11 +195,21 @@ class YamlConfigManager:
         return schema, validator
 
     def load_content(self):
+        """
+        Load the actual Yaml content file
+        All errors (file, access control, parsing, schema) are reported in the log
+        If he file is invalid, it is renamed.
+        This function does not recreate a file just yet.
+        """
         retval = {}
 
         try:
             if not self.config_file_path.exists():
-                logger.info("Configuration file '%s' is missing and will be created.", self.config_file_path)
+                logger.info(
+                    "Configuration file '%s' is missing and will be created.",
+                    self.config_file_path
+                )
+
                 return retval
         except PermissionError:
             logger.info("Configuration file '%s' cannot be accessed.", self.config_file_path)
@@ -207,7 +217,7 @@ class YamlConfigManager:
 
         # Parse it!
         try:
-            with open(self.config_file_path) as stream:
+            with open(self.config_file_path, encoding="utf-8") as stream:
                 retval = self.yaml.load(stream)
                 jsonschema.validate(retval, self.schema)
 
@@ -224,8 +234,9 @@ class YamlConfigManager:
             logger.error("Failed to interpret the content of '%s'", self.config_file_path)
             logger.error("Got: %s", exception)
 
-        # Since we failed to include the file succesfully, rename this one to make room for a fresh one
-        newname = self.config_file_path.with_suffix(".yaml.old")
+        # Since we failed to include the file succesfully
+        # Rename this one to make room for a fresh one
+        newname = self.config_file_path.with_suffix(YAML_FILE_RENAME_SUFFIX)
 
         try:
             retval = {}
@@ -238,15 +249,19 @@ class YamlConfigManager:
         return retval
 
     def generate_default_content(self):
-        # Generate a default content
+        """ Generate a default content in memory """
         default_config = self._populate_defaults(self.schema)
         self._add_comments(default_config, self.schema)
 
         return default_config
 
     def write_content(self):
-        # Overwrite the file
-        # Make sure the directory exists
+        """
+        Attempts to overwrite the file with a new one.
+        The directory is creating if it does not exists with 755 permissions.
+        The file is then written.
+        Errors are produced in the log if a problem is encountered.
+        """
         config_dir = self.config_file_path.parent
 
         logger.info("Creating a default content %s", self.config_file_path)
@@ -263,10 +278,13 @@ class YamlConfigManager:
                 return
 
         try:
-            with open(self.config_file_path, 'w') as content_file:
+            with open(self.config_file_path, 'w', encoding="utf-8") as content_file:
                 self.yaml.dump(self.content, content_file)
         except Exception as exception:
-            logger.error("Failed to create a default configuration file '%s'", self.config_file_path)
+            logger.error(
+                "Failed to create a default configuration file '%s'",
+                self.config_file_path
+            )
             logger.error("Got: %s", exception)
 
     def __init__(self, section_name: str) -> dict:
@@ -299,7 +317,9 @@ class YamlConfigManager:
         self.convert_values_to_units(self.content, self.schema)
 
     def get_content(self):
+        """ Accessor of the content """
         return self.content
+
 
 # Create new dictionary dynamically in this module
 for section in CONFIG_SECTIONS:
