@@ -24,6 +24,5 @@ from pcb2gcode.units import rpm
 
 
 def test_global_settings():
-   assert gs.spindle_speed.max.unit == rpm
-   assert gs.spindle_speed.min.unit == rpm
-
+    assert gs.spindle_speed.max.unit == rpm
+    assert gs.spindle_speed.min.unit == rpm

@@ -16,41 +16,46 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
+
 import sys
+import os
 from pathlib import Path
-from pcb2gcode.board_processor import BoardProcessor
+
+import pytest
+
 from pcb2gcode.machining import Machining
 from pcb2gcode.operations import Operations
-
 from pcb2gcode.units import mm
 
 
+@pytest.mark.skipif('CI' in os.environ, reason="No KiCAD setup in CI")
 def test_simple_file():
-   # Load from this folder
-   this_path = Path(__file__).resolve().parent
-   pcb_file_path = this_path / "pulsegen.kicad_pcb"
+    from pcb2gcode.board_processor import BoardProcessor
 
-   processor = BoardProcessor(pcb_file_path)
+    # Load from this folder
+    this_path = Path(__file__).resolve().parent
+    pcb_file_path = this_path / "pulsegen.kicad_pcb"
 
-   for dia, holes in processor.inventory.pth.items():
-      print(dia, holes)
-      print(dia(mm), len(holes) )
+    processor = BoardProcessor(pcb_file_path)
 
-   for dia, holes in processor.inventory.npth.items():
-      print(dia, holes)
-      print(dia(mm), len(holes) )
+    for dia, holes in processor.inventory.pth.items():
+        print(dia, holes)
+        print(dia(mm), len(holes))
 
-   # Create a machining object for our operations
-   machining = Machining(processor.inventory)
+    for dia, holes in processor.inventory.npth.items():
+        print(dia, holes)
+        print(dia(mm), len(holes))
 
-   # Process the inventory for the given operations
-   required_rack = machining.process(Operations.ALL)
+    # Create a machining object for our operations
+    machining = Machining(processor.inventory)
 
-   print(required_rack)
+    # Process the inventory for the given operations
+    required_rack = machining.process(Operations.ALL)
 
-   # Optimize all displacements
-   machining.optimize()
+    print(required_rack)
 
-   # Generate the GCode
-   machining.generate_machine_code(sys.stdout)
+    # Optimize all displacements
+    machining.optimize()
 
+    # Generate the GCode
+    machining.generate_machine_code(sys.stdout)
