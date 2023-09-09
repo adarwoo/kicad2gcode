@@ -1,22 +1,44 @@
+# -*- coding: utf-8 -*-
+
+#
+# This file is part of the pcb2gcode distribution (https://github.com/adarwoo/pcb2gcode).
+# Copyright (c) 2023 Guillaume ARRECKX (software@arreckx.com).
+# 
+# This program is free software: you can redistribute it and/or modify  
+# it under the terms of the GNU General Public License as published by  
+# the Free Software Foundation, version 3.
+#
+# This program is distributed in the hope that it will be useful, but 
+# WITHOUT ANY WARRANTY; without even the implied warranty of 
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU 
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License 
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
+
 """
 Process a board in order to create an inventory
 All KiCAD coordinate and positions are converter here
+
+This should be the only file with dependencies to the KiCAD libary.
 No KiCAD is exposed outside of this file
 """
+import platform
+import sys
+
 from pathlib import Path
-from math import radians, cos, sin
 from logging import getLogger
 
 from .coordinate import Coordinate
 from .units import nm, degree
 from .pcb_inventory import Inventory
 
+
 logger = getLogger(__name__)
 
-def append_path():
-   import platform
-   import sys
-
+# Import pcbnew from Linux or Windows.
+try:
    if platform.system() == "Windows":
       try:
          import winreg
@@ -59,8 +81,6 @@ def append_path():
       os.environ["LD_LIBRARY_PATH"] = str(kicad) + os.pathsep + os.environ.get("LD_LIBRARY_PATH","")
       sys.path.append(str(kicad))
 
-try:
-   append_path()
    from pcbnew import LoadBoard, BOARD, PCB_VIA_T, VIATYPE_THROUGH, \
       PAD_ATTRIB_PTH, PAD_ATTRIB_NPTH, PAD_DRILL_SHAPE_CIRCLE, PAD_DRILL_SHAPE_OBLONG
 except:
@@ -75,6 +95,7 @@ def tocoord(x, y=None):
    
 
 class BoardProcessor:
+   """ Process a KiCAD PCB board """
    def __init__(self, pcb_file_path):
       board = LoadBoard(pcb_file_path)
 

@@ -1,12 +1,46 @@
-#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+
+#
+# This file is part of the pcb2gcode distribution (https://github.com/adarwoo/pcb2gcode).
+# Copyright (c) 2023 Guillaume ARRECKX (software@arreckx.com).
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, version 3.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
+"""
+This is largely based on units and other conversion tool, but made
+ much simpler for this need with the added feature that all units
+ store value as is - and are referenced from the smallest unit.
+Also, the __call__ was overriden to make things easy to use and read:
+ a = 4*mm can be written as a = mm(4)
+Accessing the value is simply a() - or in um say : a(um).
+Array can be created with the correct unit - so thou, inch and mm can be
+  mixed without loss of precision and working on integers
+Finally, the number can be created from a string (for configurations) and
+retains the orginal format (like a fraction).
+
+Most math operators are supported - but you can only add/substract quantities
+for now as multiplying quantities would change the unit.
+This is not required here and therefore, not done.
+"""
 import re
 from operator import __lt__, __le__, __eq__, __ne__, __ge__, __gt__
 from .utils import round_significant
 
+
 # TODO -> such a libary implicitly doing loss of precision is ***@!
 # Pb: The rounding error could impact (to test) finding the bit
 def fround(f):
-    # Round to 14 digits to prevent float rounding errors during conversion
+    """ Round to 14 digits to prevent float rounding errors during conversion """
     return round_significant(f, 14)
 
 
@@ -18,14 +52,6 @@ RE_NUMBER = re.compile(
 )
 
 
-# This is largely based on units and other conversion tool, but made
-#  much simpler for this need with the added feature that all units
-#  store value as is - and are referenced from the smallest unit.
-# Also, the __call__ was overriden to make things easy to use and read:
-# a = 4*mm can be written as a = mm(4)
-# Accessing the value of a is simply a() - or in um say : a(um).
-# Array can be created with the correct unit - so thou, inch and mm can be
-#  mixed without loss of precision and working on integers
 class Quantity:
     """
     Represents the quantity of a given unit
@@ -130,7 +156,7 @@ class Quantity:
 
     def __abs__(self):
         return Quantity(abs(self._value), self.base_unit)
-    
+
     def __pow__(self, exponent):
         return Quantity(self.value ** exponent, self.base_unit)
 
@@ -141,6 +167,8 @@ class Quantity:
         if isinstance(other, (int, float)):
             return operator(self.value, other)
         elif isinstance(other, Quantity):
+            # Make sure we're comparing apples with apples
+            assert self.base_unit.type is other.base_unit.type
             return operator(fround(self.base), fround(other.base))
         else:
             raise TypeError("Unsupported operation type")
@@ -167,7 +195,7 @@ class Quantity:
         """
         Convert to the smallest
         """
-        return hash(self.value * self.base_unit.conversion_factor)
+        return hash(fround(self.value * self.base_unit.conversion_factor))
 
 
 class Unit:

@@ -20,10 +20,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-# Note: The original code can be found in https://github.com/dsc/bunch
-# Unfortunatly, it does not work for Python3 (very simple fix.)
-# The code was re-written as a one file but must be credited to the author.
+"""
+Flatten a dictionary to create dynamic attributes
+
+Note: The original code can be found in https://github.com/dsc/bunch
+Unfortunatly, it does not work for Python3 (very simple fix.)
+The code was re-written as a one file but this work must be credited to the author.
+"""
 class Bunch(dict):
+    """ Dynamic dict replacement """
     def __contains__(self, k):
         try:
             return dict.__contains__(self, k) or hasattr(self, k)

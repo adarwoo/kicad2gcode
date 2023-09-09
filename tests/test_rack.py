@@ -1,3 +1,21 @@
+# -*- coding: utf-8 -*-
+
+#
+# This file is part of the pcb2gcode distribution (https://github.com/adarwoo/pcb2gcode).
+# Copyright (c) 2023 Guillaume ARRECKX (software@arreckx.com).
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, version 3.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+
 from pcb2gcode.rack import Rack
 from pcb2gcode.cutting_tools import DrillBit, RouterBit
 from pcb2gcode.units import mm
@@ -46,7 +64,7 @@ def test_atc():
    r.add_bit(DrillBit(1.8*mm))
    r.add_bit(DrillBit(1.9*mm))
    r.add_bit(RouterBit(0.8*mm))
-   
+
    assert r.get_tool(3).diameter == 1.8*mm
    assert r.get_tool(4).diameter == 1.9*mm
    assert r.get_tool(1).diameter == 0.8*mm and r.get_tool(1).type is RouterBit
@@ -61,9 +79,9 @@ def test_sort():
    r.add_bit(RouterBit(1.8*mm))
    r.add_bit(DrillBit(0.9*mm))
    r.add_bit(RouterBit(1.2*mm))
-   
+
    r.sort()
-   
+
    assert r.get_tool(1).diameter == 0.9*mm and r.get_tool(1).type is DrillBit
    assert r.get_tool(2).diameter == 1.8*mm and r.get_tool(2).type is DrillBit
    assert r.get_tool(3).diameter == 1.9*mm and r.get_tool(3).type is DrillBit
@@ -71,7 +89,7 @@ def test_sort():
    assert r.get_tool(5).diameter == 0.8*mm and r.get_tool(5).type is RouterBit
    assert r.get_tool(6).diameter == 1.2*mm and r.get_tool(6).type is RouterBit
    assert r.get_tool(7).diameter == 1.8*mm and r.get_tool(7).type is RouterBit
-  
+
 
 def test_sort2():
    r = Rack(5)
@@ -86,9 +104,9 @@ def test_sort2():
    r.add_bit(DrillBit(1.9*mm))
    # And 1
    r.add_bit(DrillBit(0.55*mm))
-   
+
    r.sort()
-   
+
    assert r.get_tool(1).diameter == 0.55*mm
    assert r.get_tool(2).diameter == 0.85*mm
    assert r.get_tool(3).diameter == 1.8*mm

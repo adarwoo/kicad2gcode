@@ -1,8 +1,26 @@
-from pytest import MonkeyPatch
+# -*- coding: utf-8 -*-
+
+#
+# This file is part of the pcb2gcode distribution (https://github.com/adarwoo/pcb2gcode).
+# Copyright (c) 2023 Guillaume ARRECKX (software@arreckx.com).
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, version 3.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 from pcb2gcode.cutting_tools import DrillBit, RouterBit, CutDir, CuttingTool
 from pcb2gcode.units import mm, rpm, mm_min, degree, inch, um
+# pylint: disable=E0611 # The module is fully dynamic
 from pcb2gcode.config import stock
+
 
 def test_basic():
    db = DrillBit(2.0 * mm)

@@ -12,18 +12,25 @@ It aims to be used in 3 different ways:
 ## Features
 
 ### Support for ATC and manual tool change
-Save you racks and reuse them. Get clear instructions for the minimum change required.
-Racks are optimized to minimise the number of tool changes and always sorted.
-Racks can have broken slots too.
-Holes can be drilled or routed.
+Define standard racks and use them.
+The existing rack is evaluated and an updated version is generated along with
+instructions for the changes required (add or replace a bit).
+
+Racks are optimized to minimise the number of tool changes and are always sorted
+to make the operator's life easier.
+Racks can have un-usable slots too.
+
 Get rack composition clearly layed out for you.
 
 ### Custom shop tools
 Define you cutting tools on hand and let the software work it out for you.
 It uses your tolerance to optimise the work.
+If holes cannot be drilled (no adequate size), a router bit is used instead.
+The software check the drilling depth required based on the bit diameter and
+geometry and ensure it does not go through the backing board.
 
 ### Optimized machining
-Travelling Salesman Problem applied throughout to minimise traveling time.
+A Travelling Salesman Problem is applied throughout to minimise traveling time.
 This is applied for drilling and routing.
 
 ### Support for different units
@@ -39,7 +46,6 @@ The generated code optimised the feed rate and spindle speed based on the
 manufacturing data and the CNC capability.
 
 ## Installation
-
 The intent is to host it on pip -that's outstanding too.
 ```bash
 $ pip install pcb2gcode

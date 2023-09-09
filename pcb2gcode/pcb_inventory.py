@@ -1,17 +1,40 @@
-#!/usr/bin/python3
-from typing import List, Tuple
+# -*- coding: utf-8 -*-
+
+#
+# This file is part of the pcb2gcode distribution (https://github.com/adarwoo/pcb2gcode).
+# Copyright (c) 2023 Guillaume ARRECKX (software@arreckx.com).
+# 
+# This program is free software: you can redistribute it and/or modify  
+# it under the terms of the GNU General Public License as published by  
+# the Free Software Foundation, version 3.
+#
+# This program is distributed in the hope that it will be useful, but 
+# WITHOUT ANY WARRANTY; without even the implied warranty of 
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU 
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License 
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
+"""
+Creates an abstract inventory for the PCB.
+"""
+from typing import Dict
+from collections import OrderedDict
 from math import radians, cos, sin, sqrt
 
-from .units import um, degree
+from .units import um, degree, Length
 from .coordinate import Coordinate
 from .operations import Operations
 
 
 class Feature:
+    """ Abstract base class feature of the inventory """
     @classmethod
     @property
     def type(cls):
         return cls
+
 
 class Hole(Feature):
     """
@@ -33,7 +56,7 @@ class Hole(Feature):
 
 
 class Oblong(Hole):
-    """ Representation of a oblong hole information collected from KiCAD """
+    """ Representation of a oblong hole """
     def __init__(self, slitwidth, start, end):
         super().__init__(slitwidth, start)
         self.end = end
@@ -56,8 +79,8 @@ class Inventory:
     The inventory is created from the PCB data and does not factor how it will be machined
     """
     def __init__(self, offset):
-        self.pth = {} # type: Dict[Length, Feature]
-        self.npth = {} # type: Dict[Length, Feature]
+        self.pth: Dict[Length, Feature] = OrderedDict()
+        self.npth: Dict[Length, Feature] = OrderedDict()
         self.offset = offset
 
     def _add_hole(self, hole: Hole, pth):

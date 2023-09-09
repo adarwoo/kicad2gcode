@@ -41,23 +41,20 @@ comments and also round-trip files.
 The application can make changes to a configuration which can later be saved
 back with the comments preserved.
 """
-import jsonschema
 import logging
 import sys
-
-from .constants import CONFIG_USER_PATH, CONFIG_SECTIONS, \
-    SCHEMA_FILE__FILENAME_SUFFIX, SCHEMA_PATH
-
+import re
 from pathlib import Path
 
+import jsonschema
 import ruamel.yaml
 from ruamel.yaml.comments import CommentedMap, CommentedSeq
 
+from .constants import CONFIG_USER_PATH, CONFIG_SECTIONS, \
+    SCHEMA_FILE__FILENAME_SUFFIX, SCHEMA_PATH
 from .units import Unit
-
-import re
-
 from .bunch import bunchify
+
 
 logger = logging.getLogger(__name__)
 

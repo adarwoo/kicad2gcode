@@ -1,39 +1,63 @@
-#!/usr/bin/python3
+# -*- coding: utf-8 -*-
 
-# Rack management for the project
-# If the CNC has automated changes, you want to create a standard
-# rack, so most jobs will reuse the same tool position
-# Can also be used to compute the wear of the bits in the rack
+#
+# This file is part of the pcb2gcode distribution (https://github.com/adarwoo/pcb2gcode).
+# Copyright (c) 2023 Guillaume ARRECKX (software@arreckx.com).
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, version 3.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
 
-# Complex number are used where real part is a drill bit and the imaginary a router
+"""
+Rack management for the project
+If the CNC has automated changes, you want to create a standard
+rack, so most jobs will reuse the same tool position
+Can also be used to compute the wear of the bits in the rack
+"""
+import logging
 from collections import OrderedDict
 from typing import List
-from operator import itemgetter
 
-from .config import global_settings as gs
 from .cutting_tools import CuttingTool, DrillBit, RouterBit
-
-import logging
 
 
 logger = logging.getLogger(__name__)
 
 
 class RackSetupOp:
+    """ Abstract base class for all rack setup operations """
     def __init__(self, slot, name, final_tool) -> None:
         self.slot = slot
         self.final_tool = final_tool
         self.name = name
 
+    def __repr__(self) -> str:
+        return f"T{self.slot:02}: {self.name} {self.final_tool}"
+
 
 class RackAddTool(RackSetupOp):
+    """ Operation where a tool shall be added to a vacant slot """
     def __init__(self, slot, final_tool) -> None:
         super().__init__(slot, "ADD", final_tool)
 
 
 class RackReplaceTool(RackSetupOp):
+    """ Operation where a tool shall be replaced by another """
     def __init__(self, slot, from_tool, final_tool) -> None:
         super().__init__(slot, "REPLACE", final_tool)
+        self.from_tool = from_tool
+
+    def __repr__(self) -> str:
+        return f"T{self.slot:02}: REPLACE {self.from_tool} WITH {self.final_tool}"
 
 
 class Rack:
@@ -69,7 +93,7 @@ class Rack:
 
     def __len__(self):
         return len(self.rack)
-    
+
     @property
     def is_manual(self):
         return self.size == 0
@@ -114,14 +138,14 @@ class Rack:
         Raise: ValueError if the rack is full
         """
         retval = None
-        
+
         if self.size:
             if position is None:
                 position = self.find_free_position()
             elif position < 1 or position > len(self.rack):
                 if position in self.invalid_slot:
                     logger.warning("Slot %d is not usable", position)
-                    
+
                 raise ValueError("Invalid position")
 
             if self.rack[position - 1] is not None and not no_warn:
@@ -143,7 +167,7 @@ class Rack:
         else:
             self.rack.append(bit)
             retval = len(self.rack)
-            
+
         return retval
 
     def merge(self, rack) -> List[RackSetupOp]:
@@ -173,7 +197,7 @@ class Rack:
                 else:
                     self.rack[pos-1] = tool_to_set
                     operations.append(RackAddTool(pos, tool_to_set))
-        
+
         return operations
 
     def remove_bit(self, bit):
@@ -208,7 +232,7 @@ class Rack:
                 retval = len(self.rack)
 
         return retval
-    
+
     def request(self, what: CuttingTool):
         """
         Request a cutting tool from the rack.
@@ -221,10 +245,10 @@ class Rack:
         """
         # Grab a standard cutting tool
         retval = CuttingTool.request(what)
-        
+
         if not retval:
             raise ValueError("Cannot get bit size from stock")
-        
+
         # Locate in this rack
         for tool, slot in self.items():
             if tool == retval:
@@ -245,13 +269,13 @@ class Rack:
             for bit in self.rack:
                 if bit:
                     newrack.append(bit)
-                    
+
             # Sort it
             newrack.sort()
-            
+
             # Reset the rack
             self.rack = [None] * self.size
-            
+
             # Put sorted elements in
             index = 0
             for bit in newrack:
@@ -271,7 +295,7 @@ class Rack:
                 rack_str += f"T{id+1:02}:{tt}{dia} "
 
         return rack_str
-        
+
 
 class RackManager:
     """
@@ -292,17 +316,17 @@ class RackManager:
         self.issue = rc.issue
         self.size = rc.size
         self.racks = OrderedDict()
-        
+
         for id, tools in rc.racks.items():
             rack = Rack(self.size)
             current_slot = 1
-            
+
             for tool in tools:
                 if "slot" in tool:
                     current_slot = tool["slot"]
                 else:
                     current_slot += 1
-                    
+
                 if tool.get("use", True) is False:
                     rack.invalidate_slot(current_slot)
                 elif "drill" in tool:
@@ -313,9 +337,9 @@ class RackManager:
                     assert False, "unreachable"
 
             self.racks[id] = rack
-               
+
         use = rc.get("use", None)
-        
+
         if use:
             if use in self.racks:
                 self.rack = self.racks[use]
