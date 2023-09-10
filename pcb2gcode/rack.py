@@ -241,7 +241,7 @@ class Rack:
 
         Args:
             what (CuttingTool): A cutting tool
-        @returns The ID of the slot
+        @returns A tuple as the tool and the slot number
         """
         # Grab a standard cutting tool
         retval = CuttingTool.request(what, warn)
@@ -252,10 +252,10 @@ class Rack:
         # Locate in this rack
         for tool, slot in self.items():
             if tool == retval:
-                return slot
+                return tool, slot
 
         # Not found add it
-        return self.add_bit(retval)
+        return retval, self.add_bit(retval)
 
     def sort(self):
         """
@@ -310,6 +310,7 @@ class RackManager:
     change the tools, and is considered of size unlimited.
     """
     def __init__(self) -> None:
+        # pylint: disable=E0611 # The module is fully dynamic
         from .config import rack as rc
 
         # Process the rack_data

@@ -39,8 +39,10 @@ from .pcb_inventory import Inventory, Oblong, Hole, Route
 from .units import mm
 from .coordinate import Coordinate
 from .rack import Rack
-from .cutting_tools import DrillBit, RouterBit
+from .cutting_tools import DrillBit, RouterBit, CuttingTool
 from .operations import Operations
+
+from .profiles import masso_g3 as profile
 
 
 logger = logging.getLogger(__name__)
@@ -117,10 +119,11 @@ class MachiningOperation:
     """
     A single machining operation which can result in many GCode being issued
     """
-    def __init__(self, origin, tool) -> None:
+    def __init__(self, origin: Coordinate, tool: CuttingTool) -> None:
         self.origin = origin
         self.tool = tool
-        # Allow grouping operations which TSP should not optimize
+
+        # Allow grouping operations so they are guaranteed to run consequently
         self.next_op = None
 
     def then(self, next):
@@ -143,16 +146,9 @@ class MachiningOperation:
 
         return None if first else self.origin
 
-    def to_gcode_first(self, stream: BufferedIOBase, next=None):
+    def to_gcode(self, stream: BufferedIOBase, index: int, last_index: int=0):
         """ First operation for modal commands """
         raise RuntimeError
-
-    def to_gcode_next(self, stream: BufferedIOBase, next=None):
-        """ Following operation for modal commands """
-        self.to_gcode_first(stream, next)
-
-    def to_gcode_last(self, stream: BufferedIOBase):
-        """ Chance to end a canned cycle """
 
     def __lt__(self, other):
         """ Override to sort by tool type """
@@ -170,20 +166,40 @@ class DrillHole(MachiningOperation):
     Simplest of all operations - drill a hole
     This operation is modal
     """
-    def to_gcode_first(self, stream: BufferedIOBase, next=None):
-        stream.write(f"G4 X{self.origin.x(mm)} Y{self.origin.x(mm)}")
-
+    def to_gcode(self, writer, index, last_index=0):
+        writer(profile.drill_hole(
+            self.origin.x,
+            self.origin.y,
+            self.tool.z_feedrate,
+            gs.retract_height,
+            self.tool.z_bottom,
+            index, last_index
+        ))
 
 class RouteHole(MachiningOperation):
     """
     Use a router bit to route a hole.
     Starts from the center, moves to the top or goes round.
     """
-    def __init__(self, origin, tool) -> None:
+    def __init__(self, origin: Coordinate, tool: RouterBit, hole_diameter) -> None:
         super().__init__(origin, tool)
+        self.diameter = hole_diameter
 
-    def to_gcode_first(self, stream: BufferedIOBase, next=None):
-        stream.write(f"G0 X{self.origin.x(mm)} Y{self.origin.x(mm)}")
+        # This should not be possible - belt and brace
+        assert hole_diameter >= tool.diameter, "Cannot route if the router bit is larger than the hole"
+
+    def to_gcode(self, writer, index, last_index=0):
+        writer(profile.route_hole(
+            self.diameter,
+            self.origin.x,
+            self.origin.y,
+            self.tool.diameter,
+            self.tool.cut_direction,
+            self.tool.table_feed,
+            self.tool.z_feedrate,
+            gs.retract_height,
+            self.tool.z_bottom,
+        ))
 
 
 class RouteVector(MachiningOperation):
@@ -202,6 +218,14 @@ class RouteVector(MachiningOperation):
 
 
 class Machining:
+    """
+    The Machining object processes the required operations (pth, npth, contour)
+    and compile the rack required based on the inventory.
+    It creates all the steps required during the machine, using the given
+    tool.
+    It optimizes the order of the features to be machined
+    It generates the GCode
+    """
     def __init__(self, inventory: Inventory):
         self.inventory = inventory
 
@@ -210,6 +234,9 @@ class Machining:
 
         # Drill ops for each tool in the rack
         self.tools_to_ops: Dict[int, List[MachiningOperation]] = OrderedDict()
+
+        # Keep a copy of the rack
+        self.rack: Rack = None
 
     def process(self, ops: Operations):
         """
@@ -240,20 +267,20 @@ class Machining:
                         if feature.distance > limit:
                             # Route using a single stroke
                             tool = RouterBit(feature.diameter)
-                            rack.request(tool, tool not in raw_tools)
+                            actual_tool, _ = rack.request(tool, tool not in raw_tools)
                             raw_tools.add(tool)
                             self.ops.append(
-                                RouteVector(LinearMove(feature.coord, feature.end), tool)
+                                RouteVector(LinearMove(feature.coord, feature.end), actual_tool)
                             )
 
                         else:
                             tool = DrillBit(feature.diameter)
-                            rack.request(tool, tool not in raw_tools)
+                            actual_tool, _ = rack.request(tool, tool not in raw_tools)
                             raw_tools.add(tool)
 
                             # Start by drilling start and end
-                            op = DrillHole(feature.coord, tool)
-                            op.then(DrillHole(feature.end, tool))
+                            op = DrillHole(feature.coord, actual_tool)
+                            op.then(DrillHole(feature.end, actual_tool))
                             self.ops.append(op)
 
                             # Drill intermediate
@@ -268,19 +295,23 @@ class Machining:
                                 ratio = i / total_points
                                 x = x1 + (x2 - x1) * ratio
                                 y = y1 + (y2 - y1) * ratio
-                                op.then(DrillHole(Coordinate(x, y), tool))
+                                op.then(DrillHole(Coordinate(x, y), actual_tool))
 
                             self.ops.append(op)
 
                     elif isinstance(feature, Hole):
                         tool = DrillBit(feature.diameter)
-                        rack.request(tool, tool not in raw_tools)
+                        actual_tool, _ = rack.request(tool, tool not in raw_tools)
                         raw_tools.add(tool)
-                        self.ops.append(DrillHole(feature.coord, tool))
+
+                        if actual_tool.type == RouterBit:
+                            self.ops.append(RouteHole(feature.coord, actual_tool, tool.diameter))
+                        else:
+                            self.ops.append(DrillHole(feature.coord, actual_tool))
 
                     elif isinstance(feature, Route):
                         tool =  RouterBit(feature.diameter)
-                        rack.request(tool, tool not in raw_tools)
+                        actual_tool, _ = rack.request(tool, tool not in raw_tools)
                         raw_tools.add(tool)
                     else:
                         raise RuntimeError
@@ -304,13 +335,16 @@ class Machining:
         This operation is necessary to assign a tool number to the machining operation now
         the rack is known.
         """
+        # Store for later consultation
+        self.rack = rack
+
         # Reset the ops
         self.tools_to_ops = OrderedDict()
 
         # Sort the operations by 'drill' first, smallest first, router
         for op in sorted(self.ops):
             # Grab tool
-            tool_id = rack.request(op.tool, False)
+            _, tool_id = rack.request(op.tool, False)
             self.tools_to_ops.setdefault(tool_id, []).append(op)
 
     def optimize(self):
@@ -378,25 +412,43 @@ class Machining:
                     tool_ops.append(final_ops[i])
 
     def generate_machine_code(self, stream: BufferedIOBase):
+        from textwrap import dedent
+
+        def gen(y):
+            for chunk in y:
+                for line in chunk.split('\n'):
+                    line = line.strip()
+
+                    if not len(line):
+                        continue
+
+                    if not line.startswith('('): # TODO Regex
+                        stream.write(f"N{gen.numbering:04} ")
+                        gen.numbering += 10
+
+                    stream.write(dedent(line))
+                    stream.write("\n")
+
+        gen.numbering = 10
+
         # The operations are already sorted by tool type and diameter
         # We need to apply a TSP to each tool operation
         # Note: The TSP optimization ignores the tool location during tool change
-        for ops in self.tools_to_ops.values():
-            first = True
+        gen(profile.header("TOTO"))
+
+        for slot, ops in self.tools_to_ops.items():
+            # The tool is the same for all ops. Grab it from the first
+            gen(profile.change_tool(
+                slot,
+                ops[0].tool.rpm,
+                ops[0].tool.__stockname__,
+                ops[0].tool.diameter,
+                not self.rack.is_manual
+            ))
+
             last_index = len(ops) - 1
 
             for index, op in enumerate(ops):
-                # Is there a next?
-                if index == last_index:
-                    next = None
-                else:
-                    next = ops[index+1]
+                op.to_gcode(gen, index, last_index)
 
-                if first:
-                    op.to_gcode_first(stream, next)
-                else:
-                    first = False
-                    op.to_gcode_next(stream, next)
-
-                if next is None:
-                    op.to_gcode_last(stream)
+        gen(profile.footer())

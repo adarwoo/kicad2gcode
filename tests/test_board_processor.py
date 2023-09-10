@@ -30,6 +30,7 @@ from pcb2gcode.units import mm
 
 @pytest.mark.skipif('CI' in os.environ, reason="No KiCAD setup in CI")
 def test_simple_file():
+    """ Test real life situation with a test PCB """
     from pcb2gcode.board_processor import BoardProcessor
 
     # Load from this folder
@@ -37,14 +38,6 @@ def test_simple_file():
     pcb_file_path = this_path / "pulsegen.kicad_pcb"
 
     processor = BoardProcessor(pcb_file_path)
-
-    for dia, holes in processor.inventory.pth.items():
-        print(dia, holes)
-        print(dia(mm), len(holes))
-
-    for dia, holes in processor.inventory.npth.items():
-        print(dia, holes)
-        print(dia(mm), len(holes))
 
     # Create a machining object for our operations
     machining = Machining(processor.inventory)

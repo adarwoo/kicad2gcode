@@ -75,14 +75,24 @@ class CuttingTool:
     __order__ = 0
 
     def __init__(self, diameter: Length):
+        # Store the cutting tool class type (DrillBit, RouterBit)
         self.type = self.__class__
+        # Diameter of the cutting tool
         self.diameter = diameter
+        # Angle of the tip (from the configuration)
         self.tip_angle = gs.drillbit_point_angle
+        # Cut direction of the bit
         self.cut_direction = CutDir.UNKWOWN
+        # RPM at which to do the cut
         self.rpm = rpm(0)
+        # Feedrate in the z axis (going into the board)
         self.z_feedrate = FeedRate.from_scalar(0)
-        # If True, allow for larger sizes. OK for a drillbit, but not for a routerbit
-        self.__allow_oversizing__=False
+        # Drilldepth
+        self.z_bottom = (diameter * HEIGHT_TO_DIA_RATIO) + gs.exit_depth_min
+
+        # Belt and braces - this should have already been checked but hey!
+        assert self.z_bottom() > 0
+
 
         # Grab a set of interpolated data
         key_unit = Unit.get_unit(self.__mfg_data__.units[0])
@@ -238,7 +248,7 @@ class CuttingTool:
             warn and logger.warning(
                 "%s %s - normalized to: %s has an excessive exit depth.\n"
                 "Exit depth required %s is greater than the max depth allowed %s\n"
-                "Switching to routing the hole instead",
+                "The hole will be routed instead",
                 cutting_tool.__stockname__,
                 cutting_tool.diameter,
                 normalized_size_tool.diameter,

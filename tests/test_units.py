@@ -189,3 +189,34 @@ def test_multiply():
 def test_misc():
     my_mm = Unit.get_unit("mm")
     assert my_mm is mm
+
+def test_operators():
+    l1 = Length.from_string("4cm")
+    l2 = Length.from_string("40mm")
+    l3 = Length.from_string("4.1cm")
+    l4 = Length.from_string("41mm")
+
+    assert l1 == cm(4)
+    assert l1 == mm(40)
+
+    assert l2 == l2
+    assert l1 == l1
+    assert l1 == l2
+    assert l2 == l1
+
+    assert l2 <= l2
+    assert l1 <= l1
+    assert l1 <= l2
+    assert l2 <= l1
+    assert l1 <= l3
+    assert l1 <= l4
+
+    assert not (l4 <= l1)
+    assert not (l3 <= l1)
+
+    assert l2 >= l2
+    assert l1 >= l1
+    assert l2 >= l1
+    assert l1 >= l2
+    assert l3 >= l1
+    assert l4 >= l1

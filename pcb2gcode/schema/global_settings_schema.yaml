@@ -50,37 +50,49 @@ properties:
         description: "Maximum Z feedrate"
         unit: feedrate
         anyOf:
-          - type: "number"
+          - type: number
           - *feedrate_string
         default: 4000
         minimum: 0
     required: [min, max]
-    description: "Practical CNC limits"
+    description: Practical CNC limits
   safe_distance:
-    description: "Minimum distance to the machining plate"
+    description: Minimum distance to the machining plate
     unit: length
     anyOf:
-      - type: "number"
+      - type: number
       - &length_string
         type: "string"
         pattern: "^(?:\\d+(?:\\.\\d+)?|\\d+\\/\\d+)(?:mm|cm|in|inch|mil|thou)$"
     default: "0.5mm"
   exit_depth_min:
-    description: "Minimum depth beyond the bottom of the PCB from the tip of the bit"
+    description: Minimum depth beyond the bottom of the PCB from the tip of the bit
     unit: length
     anyOf:
-      - type: "number"
+      - type: number
       - *length_string
-    default: "0.7mm"
+    default: 0.7mm
+  retract_height:
+    description: |
+      Z distance to retract to between machining operations
+      that is the distance from the top of the board upwards.
+      If you have a pressure place, this distance should allow the plate
+      to spring back to neutral position and to allow for hovering over
+      any fixtures on the table
+    unit: length
+    anyOf:
+      - type: number
+      - *length_string
+    default: 10mm
   drillbit_point_angle:
     description: "Drillbit endpoint geometry angle in degrees"
     unit: angle
     anyOf:
-      - type: "number"
-      - type: "string"
+      - type: number
+      - type: string
         pattern: "^(?:\\d+(?:\\.\\d+)?)(?:deg|degree)$"
     default: 135
-    minimum: 0
+    minimum: 30
     maximum: 180
   slot_peck_drilling:
     description: "Setup for peck drilling slots or oblong holes"
