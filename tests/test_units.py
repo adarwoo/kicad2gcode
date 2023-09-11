@@ -220,3 +220,12 @@ def test_operators():
     assert l1 >= l2
     assert l3 >= l1
     assert l4 >= l1
+
+def test_rounding():
+    """ Test the units rounding function """
+    l1 = 32.456456*mm
+    res = 5*um
+
+    res = l1.round(res)
+
+    assert res == 32.455 * mm

@@ -40,6 +40,7 @@ from .coordinate import Coordinate
 from .rack import Rack
 from .cutting_tools import DrillBit, RouterBit, CuttingTool
 from .operations import Operations
+from .context import ctx
 
 from .profiles import masso_g3 as profile
 
@@ -167,11 +168,11 @@ class DrillHole(MachiningOperation):
     """
     def to_gcode(self, writer, index, last_index=0):
         writer(profile.drill_hole(
-            self.origin.x,
-            self.origin.y,
+            ctx.rounder * self.origin.x,
+            ctx.rounder * self.origin.y,
             self.tool.z_feedrate,
-            gs.retract_height,
-            self.tool.z_bottom,
+            ctx.rounder * gs.retract_height,
+            ctx.rounder * self.tool.z_bottom,
             index, last_index
         ))
 
@@ -190,14 +191,14 @@ class RouteHole(MachiningOperation):
     def to_gcode(self, writer, index, last_index=0):
         writer(profile.route_hole(
             self.diameter,
-            self.origin.x,
-            self.origin.y,
+            ctx.rounder * self.origin.x,
+            ctx.rounder * self.origin.y,
             self.tool.diameter,
             self.tool.cut_direction,
             self.tool.table_feed,
             self.tool.z_feedrate,
-            gs.retract_height,
-            self.tool.z_bottom,
+            ctx.rounder * gs.retract_height,
+            ctx.rounder * self.tool.z_bottom,
         ))
 
 
@@ -226,8 +227,6 @@ class Machining:
     It generates the GCode
     """
     def __init__(self, inventory: Inventory):
-        from .context import ctx
-
         self.inventory = inventory
 
         # Add self to the context right away

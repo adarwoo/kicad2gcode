@@ -118,6 +118,19 @@ class Quantity:
     def unit(self):
         return self.base_unit
 
+    def round(self, resolution):
+        """ Round a number to a given resolution """
+        assert self.base_unit.type is resolution.base_unit.type
+
+        # Whole numbers of resolutions
+        whole = round(self.base/resolution.base)
+
+        # Rounded value in the resolution unit
+        rounded = (whole * resolution)(self.unit)
+
+        # Convert back to the number's unit
+        return rounded * self.unit
+
     def __mul__(self, other):
         if isinstance(other, (int, float, complex)):
             return Quantity(self.value * other, self.base_unit)

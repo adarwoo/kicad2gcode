@@ -33,6 +33,22 @@ from .config import machining_data as md
 # pylint: disable=E0611 # The module is fully dynamic
 from .config import stock
 
+from .units import Length
+
+
+class RoundToCNCResolution:
+    """ Helper object to round length using the * operator """
+
+    # Store the CNC resolution
+    __resolution__ = gs.resolution
+
+    @classmethod
+    def round(cls, value: Length):
+        return value.round(cls.__resolution__)
+
+    def __mul__(self, other: Length):
+        return self.round(other)
+
 
 class Context:
     """ Context object to pass compound information to adapters """
@@ -49,6 +65,9 @@ class Context:
 
         # Machining instance
         self.machining = None
+
+        # Rounding instance
+        self.rounder = RoundToCNCResolution()
 
     @property
     def rack(self):
