@@ -13,49 +13,77 @@ properties:
   spindle_speed:
     type: object
     properties:
-      max:
-        description: "Maximum spindle speed in RPM"
+      min:
+        description: "Minimum spindle speed in RPM"
         unit: rpm
         anyOf:
           - type: "number"
           - &rpm_string
             type: "string"
             pattern: "^(?:\\d+(?:\\.\\d+)?)(?:rpm)$"
-        default: 24000
-        minimum: 0
-      min:
-        description: "Minimum spindle speed in RPM"
-        unit: rpm
-        anyOf:
-          - type: "number"
-          - *rpm_string
         default: 10000
         minimum: 0
-    required: [max, min]
-    description: "Practical spindle limits in RPM"
-  z_feedrate:
-    type: object
-    properties:
-      min:
-        description: "Minimum Z feedrate"
-        unit: feedrate
-        anyOf:
-          - type: "number"
-          - &feedrate_string
-            type: "string"
-            pattern: "^(?:\\d+(?:\\.\\d+)?)(?:mm\\/min|cm\\/min|in\\/min|inch\\/min|ipm)$"
-        default: 200
-        minimum: 0
       max:
-        description: "Maximum Z feedrate"
-        unit: feedrate
+        description: "Maximum spindle speed in RPM"
+        unit: rpm
         anyOf:
           - type: number
-          - *feedrate_string
-        default: 4000
+          - *rpm_string
+        default: 24000
         minimum: 0
     required: [min, max]
-    description: Practical CNC limits
+    description: "Practical spindle limits in RPM"
+  feedrates:
+    description: Practical CNC feedrate limits during machining
+    type: object
+    properties:
+      z:
+        description: Practical limits to the Z (vertical) feedrates
+        type: object
+        properties:
+          min:
+            description: Keep Z feedrate above this value
+            unit: feedrate
+            anyOf:
+              - type: number
+              - &feedrate_string
+                type: "string"
+                pattern: "^(?:\\d+(?:\\.\\d+)?)(?:mm\\/min|cm\\/min|in\\/min|inch\\/min|ipm)$"
+            default: 200
+            minimum: 0
+          max:
+            description: Do not exceed the feedrate for the Z axis
+            unit: feedrate
+            anyOf:
+              - type: number
+              - *feedrate_string
+            default: 4000
+            minimum: 0
+        required: [min, max]
+      xy:
+        description: Practical limits to the XY (lateral) feedrates
+        type: object
+        properties:
+          min:
+            description: Keep lateral feed rate above this value
+            unit: feedrate
+            anyOf:
+              - type: number
+              - &feedrate_string
+                type: string
+                pattern: "^(?:\\d+(?:\\.\\d+)?)(?:mm\\/min|cm\\/min|in\\/min|inch\\/min|ipm)$"
+            default: 200
+            minimum: 0
+          max:
+            description: Keep lateral feed rate below this value
+            unit: feedrate
+            anyOf:
+              - type: number
+              - *feedrate_string
+            default: 4000
+            minimum: 0
+        required: [upper_limit, lower_limit]
+    required: [xy, z]
   safe_distance:
     description: Minimum distance to the machining plate
     unit: length
@@ -139,5 +167,19 @@ properties:
     description: "Thickness of the back/martyr/exit-board"
     unit: length
     default: 2.5mm
+  gcode:
+    description: Configuration around GCode production
+    type: object
+    properties:
+      strip_comments:
+        description: Strip all comments
+        type: boolean
+        default: False
+      line_numbers_increment:
+        description: Increment line numbering by this number. If 0, turn off line numbering
+        default: 10
+        type: number
+        minimum: 0
+        maximum: 1000
 
-required: [spindle_speed, z_feedrate, safe_distance, exit_depth_min, drillbit_point_angle, slot_peck_drilling, oversizing_allowance_percent, downsizing_allowance_percent, router_diameter_for_contour, backboard_thickness]
+required: [spindle_speed, z_feedrate, safe_distance, exit_depth_min, drillbit_point_angle, slot_peck_drilling, oversizing_allowance_percent, downsizing_allowance_percent, router_diameter_for_contour, backboard_thickness, gcode]

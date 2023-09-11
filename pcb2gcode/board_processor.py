@@ -101,7 +101,10 @@ class BoardProcessor:
     """ Process a KiCAD PCB board """
 
     def __init__(self, pcb_file_path):
+        from .context import ctx
+
         board = LoadBoard(pcb_file_path)
+        ctx.pcb_filename = pcb_file_path
 
         # Work out the offset
         offset = board.GetDesignSettings().GetAuxOrigin()

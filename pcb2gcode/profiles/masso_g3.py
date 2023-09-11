@@ -1,16 +1,16 @@
 from time import strftime
 
-from pcb2gcode.cutting_tools import CutDir
-from pcb2gcode.units import Length, FeedRate, Rpm, mm, mm_min, rpm
+from pcb2gcode.cutting_tools import CutDir, CuttingTool
+from pcb2gcode.units import Length, FeedRate, Rpm, mm, mm_min
+from pcb2gcode.context import ctx
 
 
-def header(filename):
+def header():
     """
     Called to create the header of the gcode file
-    @param filename Name of the PCB file
     """
     yield f"""
-        (Created by pcb2gcode from '{filename}' - {strftime("%Y-%m-%d %H:%M:%S")})
+        (Created by pcb2gcode from '{ctx.pcb_filename}' - {strftime("%Y-%m-%d %H:%M:%S")})
         (Reset all back to safe defaults)
         G17 G54 G40 G49 G80 G90
         G21
@@ -83,20 +83,16 @@ def drill_hole(
         """
 
 
-def change_tool(tool: int, speed: Rpm, type, diameter, atc):
+def change_tool(slot: int, tool: CuttingTool):
     """
     GCode for tool change.
       Variables are:
-        tool:     holds the tool number
-        rpm:      Required spindle speed
-        type:     Type of tool
-        diameter: Diameter of the tool
-        atc:      True if tool change is automatic
-
+        slot:     holds the tool slot number
+        tool:     Tool object
     """
-    msg = f"\nLoad {type} Dia={diameter}" if atc else ""
+    msg = f"\nMSG Load {tool}" if ctx.rack.is_manual else ""
 
     yield f"""T{tool}
         M06{msg}
-        S{speed()}
+        S{tool.rpm()}
     """

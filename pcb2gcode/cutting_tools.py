@@ -59,6 +59,11 @@ class CutDir(IntEnum):
     UPDOWN = 3  # Also known as compression bit
 
 
+def cap(what: int, setting):
+    """ Use the min/max from the given setting to cap the value """
+    return min(max(setting.min, what), setting.max)
+
+
 class CuttingTool:
     """Abstract base class for all cutting tools"""
 
@@ -274,8 +279,8 @@ class DrillBit(CuttingTool):
         self.cut_direction = CutDir.UP
         self.__allow_oversizing__ = True
 
-        self.rpm = self.interpolate("speed")
-        self.z_feedrate = self.interpolate("z_feed")
+        self.rpm = cap(self.interpolate("speed"), gs.spindle_speed)
+        self.z_feedrate = cap(self.interpolate("z_feed"), gs.feedrates.z)
 
     def __repr__(self) -> str:
         return f"{self.diameter} {self.rpm} zfeed:{self.z_feedrate}"
@@ -291,9 +296,9 @@ class RouterBit(CuttingTool):
         super().__init__(diameter)
         self.cut_direction = CutDir.UPDOWN
 
-        self.rpm = self.interpolate("speed")
-        self.z_feedrate = self.interpolate("z_feed")
-        self.table_feed = self.interpolate("table_feed")
+        self.rpm = cap(self.interpolate("speed"), gs.spindle_speed)
+        self.z_feedrate = cap(self.interpolate("z_feed"), gs.feedrates.z)
+        self.table_feed = cap(self.interpolate("table_feed"), gs.feedrates.xy)
         self.exit_depth = self.interpolate("exit_depth")
         self.tip_angle = 180*degree
 

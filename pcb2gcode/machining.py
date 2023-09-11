@@ -36,7 +36,6 @@ from python_tsp.exact import solve_tsp_dynamic_programming
 from .config import global_settings as gs
 
 from .pcb_inventory import Inventory, Oblong, Hole, Route
-from .units import mm
 from .coordinate import Coordinate
 from .rack import Rack
 from .cutting_tools import DrillBit, RouterBit, CuttingTool
@@ -227,7 +226,12 @@ class Machining:
     It generates the GCode
     """
     def __init__(self, inventory: Inventory):
+        from .context import ctx
+
         self.inventory = inventory
+
+        # Add self to the context right away
+        ctx.machining = self
 
         # All operations in any order
         self.ops: List[MachiningOperation] = []
@@ -247,6 +251,11 @@ class Machining:
         Returns the default rack required. This rack can be used to merge
         with a specified rack. Internal operations are based on this rack.
         """
+        from .context import ctx
+
+        # Add the operation to the context object
+        ctx.operations = ops
+
         # Start with an open rack (no tools and unlimited)
         rack = Rack()
 
@@ -412,39 +421,38 @@ class Machining:
                     tool_ops.append(final_ops[i])
 
     def generate_machine_code(self, stream: BufferedIOBase):
-        from textwrap import dedent
-
+        """
+        Function to be used to write to the stream
+        Allow formatting the output in a global way
+        """
         def gen(y):
             for chunk in y:
                 for line in chunk.split('\n'):
+                    # Remove all forward spaces
                     line = line.strip()
 
-                    if not len(line):
+                    if not line:
                         continue
 
-                    if not line.startswith('('): # TODO Regex
-                        stream.write(f"N{gen.numbering:04} ")
-                        gen.numbering += 10
+                    if not line.startswith('('): # Simple - but probably just fine
+                        if gs.gcode.line_numbers_increment > 0:
+                            stream.write(f"N{gen.numbering:04} ")
+                            gen.numbering += gs.gcode.line_numbers_increment
 
-                    stream.write(dedent(line))
+                    stream.write(line)
                     stream.write("\n")
 
-        gen.numbering = 10
+        # Start the numbering using the initial increment
+        gen.numbering = gs.gcode.line_numbers_increment
 
         # The operations are already sorted by tool type and diameter
         # We need to apply a TSP to each tool operation
         # Note: The TSP optimization ignores the tool location during tool change
-        gen(profile.header("TOTO"))
+        gen(profile.header())
 
         for slot, ops in self.tools_to_ops.items():
             # The tool is the same for all ops. Grab it from the first
-            gen(profile.change_tool(
-                slot,
-                ops[0].tool.rpm,
-                ops[0].tool.__stockname__,
-                ops[0].tool.diameter,
-                not self.rack.is_manual
-            ))
+            gen(profile.change_tool(slot, ops[0].tool))
 
             last_index = len(ops) - 1
 
