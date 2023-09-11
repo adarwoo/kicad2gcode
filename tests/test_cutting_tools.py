@@ -19,14 +19,17 @@
 from pcb2gcode.cutting_tools import DrillBit, RouterBit, CutDir, CuttingTool
 from pcb2gcode.units import mm, rpm, mm_min, degree, inch, um
 # pylint: disable=E0611 # The module is fully dynamic
-from pcb2gcode.config import stock
+from pcb2gcode.config import stock, global_settings as gs
 
 
-def test_basic():
+def test_basic(monkeypatch):
     """ Test internals of a drill and router bits """
     # Set machining data so we can validate independantly
     # These are rounded to 4 digits
     DrillBit.__mfg_data__.data[2.0] = [11110, 12000]
+
+    # Avoid the limit
+    monkeypatch.setitem(gs["feedrates"]["z"], "max", 100000)
 
     db = DrillBit(2.0 * mm)
 
@@ -36,6 +39,18 @@ def test_basic():
     assert db.tip_angle == 135*degree
     assert db.rpm == rpm(11110)
     assert db.z_feedrate == mm_min(12000)
+
+    # Set a limit
+    monkeypatch.setitem(gs["feedrates"]["z"], "max", 10000)
+
+    db = DrillBit(2.0 * mm)
+
+    assert db.type is DrillBit
+    assert db.cut_direction is CutDir.UP
+    assert db.diameter == mm(2)
+    assert db.tip_angle == 135*degree
+    assert db.rpm == rpm(11110)
+    assert db.z_feedrate == mm_min(10000)
 
     # Set machining data so we can validate independantly
     RouterBit.__mfg_data__.data[1.05] = [22220, 0.5, 0.6, 0.7]

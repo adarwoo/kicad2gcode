@@ -25,7 +25,6 @@ import pytest
 
 from pcb2gcode.machining import Machining
 from pcb2gcode.operations import Operations
-from pcb2gcode.units import mm
 
 
 @pytest.mark.skipif('CI' in os.environ, reason="No KiCAD setup in CI")
