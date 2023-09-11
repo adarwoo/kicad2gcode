@@ -3,17 +3,17 @@
 #
 # This file is part of the pcb2gcode distribution (https://github.com/adarwoo/pcb2gcode).
 # Copyright (c) 2023 Guillaume ARRECKX (software@arreckx.com).
-# 
-# This program is free software: you can redistribute it and/or modify  
-# it under the terms of the GNU General Public License as published by  
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, version 3.
 #
-# This program is distributed in the hope that it will be useful, but 
-# WITHOUT ANY WARRANTY; without even the implied warranty of 
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU 
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
 # General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License 
+# You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 """
@@ -78,24 +78,23 @@ class Inventory:
     Create an inventory of Features which will require some machine.
     The inventory is created from the PCB data and does not factor how it will be machined
     """
-    def __init__(self, offset):
+    def __init__(self):
         self.pth: Dict[Length, Feature] = OrderedDict()
         self.npth: Dict[Length, Feature] = OrderedDict()
-        self.offset = offset
 
     def _add_hole(self, hole: Hole, pth):
         if pth:
             self.pth.setdefault(hole.diameter, []).append(hole)
         else:
             self.npth.setdefault(hole.diameter, []).append(hole)
-            
+
     def get_features(self, ops: Operations):
         """ @returns All feature of the pcb for the given operations """
         retval = {}
-        
+
         if ops & Operations.PTH:
             retval.update(self.pth)
-            
+
         if ops & Operations.NPTH:
             retval.update(self.npth)
 
@@ -116,7 +115,7 @@ class Inventory:
         size_y = kwargs.get("size_y", None)
         angle = kwargs.get("angle", 0*degree)
         pth = kwargs.get("pth", True)
-        
+
         if size_y is None or size_x == size_y:
             hole = Hole(size_x, coord)
             self._add_hole(hole, pth)

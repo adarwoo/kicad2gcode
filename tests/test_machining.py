@@ -24,7 +24,7 @@ from pcb2gcode.machining import Machining, Operations
 from pcb2gcode.cutting_tools import DrillBit
 
 
-inventory = Inventory(Coordinate(0, 0))
+inventory = Inventory()
 
 holes = {
     0.8: [(1,  1), (1, 100), (100,  1), (100, 100)],

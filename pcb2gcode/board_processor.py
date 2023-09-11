@@ -90,11 +90,12 @@ except:
     raise RuntimeError("Failed to import pcbnew")
 
 
-def tocoord(x, y=None):
+def tocoord(x, y):
     """ @return A traditional coordinate given in Units """
-    if y is None:
-        return Coordinate(nm(x[0]), nm(-x[1]))
-    return Coordinate(nm(x), nm(0-y))
+    return Coordinate(
+        nm(x - tocoord.offset.x),
+        nm(-tocoord.offset.y - y)
+    )
 
 
 class BoardProcessor:
@@ -106,13 +107,10 @@ class BoardProcessor:
         board = LoadBoard(pcb_file_path)
         ctx.pcb_filename = pcb_file_path
 
-        # Work out the offset
-        offset = board.GetDesignSettings().GetAuxOrigin()
+        self.inventory = Inventory()
 
-        self.inventory = Inventory(tocoord(offset))
-
-        # Work out the offset
-        self.offset = board.GetDesignSettings().GetAuxOrigin()
+        # Work out the offset (in KiCAD coordinates)
+        tocoord.offset = board.GetDesignSettings().GetAuxOrigin()
 
         # Start with the pads
         self.process_pads(board.GetPads())

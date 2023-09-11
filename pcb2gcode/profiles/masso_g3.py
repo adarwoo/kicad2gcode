@@ -14,6 +14,7 @@ def header():
         (Reset all back to safe defaults)
         G17 G54 G40 G49 G80 G90
         G21
+        G10 P0
     """
 
 def footer():
@@ -22,8 +23,13 @@ def footer():
 
 
 def route_hole(
-    size: Length, x: Length, y: Length, d: Length, cutdir: CutDir,
-    feedrate: FeedRate, z_feedrate: FeedRate, z_safe: Length, z_bottom: Length):
+    size: Length,
+    x: Length, y: Length,
+    d: Length,
+    cutdir: CutDir,
+    feedrate: FeedRate,
+    z_feedrate: FeedRate,
+    z_safe: Length, z_bottom: Length):
     """
     Called to generate the GCode for cutting a hole with a router bit
     Note: When you route the hole in a clockwise direction (viewed from above)
@@ -50,20 +56,17 @@ def route_hole(
     id = (size - d) / 2
 
     # Go straight down in the center
-    yield f"""G0 {x(mm)} {y(mm)}
+    yield f"""G0 X{x(mm)} Y{y(mm)}
     G1 Z{z_bottom(mm)} F{z_feedrate(mm_min)}
     G1 Y{(y+id)(mm)}
     """
 
     if cutdir in [CutDir.UP, CutDir.UPDOWN]:
-        yield f"""G2 X{(x+id)(mm)} Y{y(mm)} I0 J-{id(mm)}
-        G2 X{x(mm)} Y{(y-id)(mm)} I-{id(mm)} J0
-        G2 X{(x+id)(mm)} Y{y(mm)} I0 J+{id(mm)}
-        G2 X{x(mm)} Y{(y+id)(mm)} I+{id(mm)} J0
-        """
+        yield f"""G2 I0 J-{id(mm)}"""
     else:
-        yield "G3"
+        yield f"""G3 I0 J-{id(mm)}"""
 
+    yield f"""G0 Z{z_safe(mm)}"""
 
 def drill_hole(
     x: Length, y: Length,

@@ -39,8 +39,8 @@
 
   (setup
     (pad_to_mask_clearance 0)
-    (aux_axis_origin 68.25 131.2)
-    (grid_origin 68.25 131.2)
+    (aux_axis_origin 68.25 70.24)
+    (grid_origin 42.85 55)
     (pcbplotparams
       (layerselection 0x00010fc_ffffffff)
       (plot_on_all_layers_selection 0x0000000_00000000)
@@ -185,7 +185,7 @@
       (stroke (width 0.12) (type solid)) (layer "F.SilkS") (tstamp 96666558-f2e3-4848-b1c0-7332f33bf6ef))
     (fp_arc (start 63.7 8) (mid 64.053553 8.146447) (end 64.2 8.5)
       (stroke (width 0.12) (type solid)) (layer "F.SilkS") (tstamp 7a64d8fd-ccfd-4b40-b50c-f850796a6ea9))
-    (fp_arc (start 64.20104 22.49932) (mid 64.054479 22.85315) (end 63.70066 22.9997)
+    (fp_arc (start 64.20104 22.49932) (mid 64.054473 22.853115) (end 63.70066 22.9997)
       (stroke (width 0.12) (type solid)) (layer "F.SilkS") (tstamp 90617e30-8ebf-413d-80ec-59540b74ce7d))
     (fp_line (start -8.25 -2.75) (end -8.25 33.75)
       (stroke (width 0.05) (type solid)) (layer "F.CrtYd") (tstamp 3a53092b-9757-4c32-8cd1-2545b812f420))

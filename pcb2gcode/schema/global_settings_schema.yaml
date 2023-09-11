@@ -21,7 +21,7 @@ properties:
       - type: number
       - &length_string
         type: "string"
-        pattern: "^(?:\\d+(?:\\.\\d+)?|\\d+\\/\\d+)(?:mm|cm|in|inch|mil|thou)$"
+        pattern: "^(?:\\d+(?:\\.\\d+)?|\\d+\\/\\d+)(?:nm|um|mm|cm|in|inch|mil|thou)$"
     default: 1um
   spindle_speed:
     type: object
@@ -93,7 +93,7 @@ properties:
               - *feedrate_string
             default: 4000
             minimum: 0
-        required: [upper_limit, lower_limit]
+        required: [min, max]
     required: [xy, z]
   safe_distance:
     description: Minimum distance to the machining plate
@@ -191,4 +191,4 @@ properties:
         minimum: 0
         maximum: 1000
 
-required: [ctx.rounderolution, spindle_speed, z_feedrate, safe_distance, exit_depth_min, drillbit_point_angle, slot_peck_drilling, oversizing_allowance_percent, downsizing_allowance_percent, router_diameter_for_contour, backboard_thickness, gcode]
+required: [resolution, spindle_speed, feedrates, safe_distance, exit_depth_min, drillbit_point_angle, slot_peck_drilling, oversizing_allowance_percent, downsizing_allowance_percent, router_diameter_for_contour, backboard_thickness, gcode]
