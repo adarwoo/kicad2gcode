@@ -90,9 +90,10 @@ def change_tool(slot: int, tool: CuttingTool):
         slot:     holds the tool slot number
         tool:     Tool object
     """
-    msg = f"\nMSG Load {tool}" if ctx.rack.is_manual else ""
+    msg = f"\nMSG Load {tool.name} {tool.diameter}" if ctx.rack.is_manual else ""
 
-    yield f"""T{tool}
-        M06{msg}
+    yield f"""T{slot}
+        M06
+        {msg}
         S{tool.rpm()}
     """
