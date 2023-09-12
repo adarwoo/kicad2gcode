@@ -146,7 +146,7 @@ class MachiningOperation:
 
         return None if first else self.origin
 
-    def to_gcode(self, stream: BufferedIOBase, index: int, last_index: int=0):
+    def to_gcode(self, writer, index: int, last_index: int=0):
         """ First operation for modal commands """
         raise RuntimeError
 
@@ -167,11 +167,12 @@ class DrillHole(MachiningOperation):
     This operation is modal
     """
     def to_gcode(self, writer, index, last_index=0):
+        """ Virtual gcode method for the drill bit. Delegates to the profile. """
         writer(profile.drill_hole(
             ctx.rounder * self.origin.x,
             ctx.rounder * self.origin.y,
             self.tool.z_feedrate,
-            ctx.rounder * gs.retract_height,
+            ctx.rounder * gs.z_drill_retract_height,
             ctx.rounder * self.tool.z_bottom,
             index, last_index
         ))
@@ -197,7 +198,7 @@ class RouteHole(MachiningOperation):
             self.tool.cut_direction,
             self.tool.table_feed,
             self.tool.z_feedrate,
-            ctx.rounder * gs.retract_height,
+            ctx.rounder * gs.z_safe_height,
             ctx.rounder * self.tool.z_bottom,
         ))
 

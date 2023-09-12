@@ -64,7 +64,6 @@ def test_basic(monkeypatch):
     assert rb.rpm == rpm(22220)
     assert rb.z_feedrate == mm_min(600)
     assert rb.table_feed  == mm_min(500)
-    assert rb.exit_depth == mm(0.7)
 
 
 def test_stock():

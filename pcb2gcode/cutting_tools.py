@@ -44,7 +44,7 @@ logger = getLogger(__name__)
 HEIGHT_TO_DIA_RATIO = tan(radians((180-gs.drillbit_point_angle())/2))
 
 # Maximum depth allowed into the matyt board
-MAX_DEPTH_ALLOWED = gs.backboard_thickness - gs.safe_distance - gs.exit_depth_min
+MAX_DEPTH_ALLOWED = gs.backboard_thickness - gs.z_keep_safe_distance - gs.board_exit_depth_min
 
 # Compute the largest drillbit size where there is enough clearance in the backing board for
 #  the point to exit cleanly
@@ -93,7 +93,7 @@ class CuttingTool:
         # Feedrate in the z axis (going into the board)
         self.z_feedrate = FeedRate.from_scalar(0)
         # Drilldepth
-        self.z_bottom = (diameter * HEIGHT_TO_DIA_RATIO) + gs.exit_depth_min
+        self.z_bottom = (diameter * HEIGHT_TO_DIA_RATIO) + gs.board_exit_depth_min
         # Printable tool type name
         self.name = "cutter tool"
 
@@ -210,7 +210,7 @@ class CuttingTool:
             if cutting_tool.diameter < cutting_tool.get_stock_size_range()[0]:
                 # Size is too small and not supported
                 warn and logger.error(
-                    "Cutting tool size: %s is too small", cutting_tool.diameter
+                    "Hole size: %s is too small", cutting_tool.diameter
                 )
 
                 return None
@@ -220,14 +220,14 @@ class CuttingTool:
                 if cutting_tool.type is RouterBit:
                     # Size is too large
                     warn and logger.error(
-                        "Cutting tool size: %s exceed largest stock bit",
+                        "Hole size: %s exceed largest stock bit",
                         cutting_tool.diameter
                     )
 
                     return None
                 else:
-                    warn and logger.info(
-                        "Cutting tool size: %s exceed largest bit and will be routed",
+                    warn and logger.warning(
+                        "Hole size: %s exceed largest bit and will be routed",
                         cutting_tool.diameter
                     )
 
@@ -250,7 +250,7 @@ class CuttingTool:
             # But to do so - since the router dia can be any smaller size
             # - we need to wait for the drill rack to be completed
             exit_depth_required = \
-                gs.exit_depth_min + HEIGHT_TO_DIA_RATIO * normalized_size_tool.diameter
+                gs.board_exit_depth_min + HEIGHT_TO_DIA_RATIO * normalized_size_tool.diameter
 
             warn and logger.warning(
                 "%s %s - normalized to: %s has an excessive exit depth.\n"
@@ -302,7 +302,6 @@ class RouterBit(CuttingTool):
         self.rpm = cap(self.interpolate("speed"), gs.spindle_speed)
         self.z_feedrate = cap(self.interpolate("z_feed"), gs.feedrates.z)
         self.table_feed = cap(self.interpolate("table_feed"), gs.feedrates.xy)
-        self.exit_depth = self.interpolate("exit_depth")
         self.tip_angle = 180*degree
         self.name = "router bit"
 

@@ -95,24 +95,34 @@ properties:
             minimum: 0
         required: [min, max]
     required: [xy, z]
-  safe_distance:
+  z_keep_safe_distance:
     description: Minimum distance to the machining plate
     unit: length
     anyOf:
       - type: number
       - *length_string
     default: "0.5mm"
-  exit_depth_min:
+  board_exit_depth_min:
     description: Minimum depth beyond the bottom of the PCB from the tip of the bit
     unit: length
     anyOf:
       - type: number
       - *length_string
     default: 0.7mm
-  retract_height:
+  z_safe_height:
     description: |
-      Z distance to retract to between machining operations
-      that is the distance from the top of the board upwards.
+      Z distance to retract to between machining operations. This distance should
+      be well clear of fixtures on the machining table to avoid collisions.
+      The Z0 correspond to the machining bed.
+    unit: length
+    anyOf:
+      - type: number
+      - *length_string
+    default: 20mm
+  z_drill_retract_height:
+    description: |
+      Known as R value, the distance to retract to between drilling operations
+      that is the distance from the top of the machining bed upwards.
       If you have a pressure place, this distance should allow the plate
       to spring back to neutral position and to allow for hovering over
       any fixtures on the table
@@ -191,4 +201,4 @@ properties:
         minimum: 0
         maximum: 1000
 
-required: [resolution, spindle_speed, feedrates, safe_distance, exit_depth_min, drillbit_point_angle, slot_peck_drilling, oversizing_allowance_percent, downsizing_allowance_percent, router_diameter_for_contour, backboard_thickness, gcode]
+required: [resolution, spindle_speed, feedrates, z_keep_safe_distance, board_exit_depth_min, drillbit_point_angle, slot_peck_drilling, oversizing_allowance_percent, downsizing_allowance_percent, router_diameter_for_contour, backboard_thickness, gcode]

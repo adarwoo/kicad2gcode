@@ -57,6 +57,9 @@ class Context:
         self.md = md
         self.stock = stock
 
+        # Layer count
+        self.copper_layer_count: int = 0
+
         # Name of the PCB file
         self.pcb_filename: Path = None
 

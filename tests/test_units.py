@@ -20,7 +20,7 @@
 import pytest
 
 from pcb2gcode.units import Unit, Length, FeedRate, Angle, Rpm
-from pcb2gcode.units import cm_min, mm_min, in_min, inch_min
+from pcb2gcode.units import cm_min, mm_min, in_min, inch_min, m_min, ipm
 from pcb2gcode.units import deg, degree, rpm
 from pcb2gcode.units import mm, cm, um, inch, mil, thou
 
@@ -76,9 +76,15 @@ def test_lengths():
 
 
 def test_feedrates():
+    """ Test all feedrates """
     v_mm_min = 8 * mm_min
     assert v_mm_min.unit is mm_min
     assert v_mm_min.unit.type is FeedRate
+    v_m_min = 0.4 * m_min
+    assert v_m_min == 400 * mm_min
+    assert 1 * ipm == 1 * in_min
+    assert 1 * ipm == 1 * inch_min
+    assert 1 * ipm == 25.4 * mm_min
 
 
 def test_angle():

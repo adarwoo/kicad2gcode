@@ -32,7 +32,7 @@ properties:
               - const: "rpm"
               - enum: ["m/min", "mm/min", "in/mm", "ipm"]
         minItems: 2
-        maxItems: 2          
+        maxItems: 2
         default:
           ["mm", ["rpm", "mm/min"]]
 
@@ -46,7 +46,7 @@ properties:
           type: array
           items:
             - type: number
-            - type: number          
+            - type: number
         minItems: 2
         maxItems: 2
         default:
@@ -123,11 +123,12 @@ properties:
     description: |
       Lookup table from Union Tool for various router bits
       @see https://www.uniontool.co.jp/en/product/drill_router/technical_info/router_condi/fr4.html
+      @see https://www.precisebits.com/reference/diamondcutfeedspeed.htm
     type: object
 
     properties:
       fields:
-        const: ["diameter", ["speed", "table_feed", "z_feed", "exit_depth"]]
+        const: ["diameter", ["speed", "table_feed", "z_feed"]]
         description: "Name of the fields (do not change)"
 
       units:
@@ -144,9 +145,8 @@ properties:
               - const: "rpm"
               - enum: ["m/min", "mm/min", "in/mm", "ipm"]
               - enum: ["m/min", "mm/min", "in/mm", "ipm"]
-              - enum: ["mm", "in", "inch", "mil", "thou"]
         default:
-          ["mm", ["rpm", "m/min", "m/min", "mm"]]
+          ["mm", ["rpm", "m/min", "m/min"]]
 
       data:
         description: |
@@ -160,32 +160,31 @@ properties:
             - type: number
             - type: number
             - type: number
-            - type: number          
         minItems: 4
         maxItems: 4
         default:
-          0.8  : [60000, 0.4,  0.1, 0.75]
-          0.9  : [53000, 0.6,  0.1, 0.75]
-          1.0  : [48000, 0.8,  0.1, 0.75]
-          1.1  : [38000, 0.9,  0.1, 0.75]
-          1.2  : [35000, 1.0,  0.1, 0.75]
-          1.3  : [32000, 1.0,  0.1, 0.75]
-          1.4  : [30000, 1.1,  0.1, 0.75]
-          1.5  : [29000, 1.1,  0.2, 0.75]
-          1.6  : [27000, 1.2,  0.2, 0.75]
-          1.7  : [27000, 1.2,  0.2, 0.75]
-          1.8  : [25000, 1.2,  0.2, 0.75]
-          1.9  : [24000, 1.2,  0.3,  1.0]
-          2.0  : [23000, 1.2,  0.3,  1.0]
-          2.1  : [22000, 1.2,  0.3,  1.0]
-          2.2  : [21000, 1.25, 0.3,  1.0]
-          2.3  : [20000, 1.25, 0.3,  1.0]
-          2.4  : [20000, 1.3,  0.2,  1.0]
-          2.5  : [19000, 1.3,  0.2,  1.0]
-          2.6  : [19000, 1.3,  0.2,  1.0]
-          2.7  : [18000, 1.3,  0.2,  1.0]
-          2.8  : [18000, 1.3,  0.2,  1.0]
-          2.9  : [17000, 1.3,  0.2,  1.0]
-          3.0  : [17000, 1.3,  0.1,  1.0]
-          3.1  : [16000, 1.3,  0.1,  1.0]
-          3.175: [16000, 1.3,  0.1,  1.0]
+          0.8  : [60000, 0.4,  0.2]
+          0.9  : [53000, 0.6,  0.2]
+          1.0  : [48000, 0.8,  0.2]
+          1.1  : [38000, 0.9,  0.2]
+          1.2  : [35000, 1.0,  0.2]
+          1.3  : [32000, 1.0,  0.2]
+          1.4  : [30000, 1.1,  0.2]
+          1.5  : [29000, 1.1,  0.4]
+          1.6  : [27000, 1.2,  0.4]
+          1.7  : [27000, 1.2,  0.4]
+          1.8  : [25000, 1.2,  0.4]
+          1.9  : [24000, 1.2,  0.6]
+          2.0  : [23000, 1.2,  0.6]
+          2.1  : [22000, 1.2,  0.6]
+          2.2  : [21000, 1.25, 0.6]
+          2.3  : [20000, 1.25, 0.6]
+          2.4  : [20000, 1.3,  0.4]
+          2.5  : [19000, 1.3,  0.4]
+          2.6  : [19000, 1.3,  0.4]
+          2.7  : [18000, 1.3,  0.4]
+          2.8  : [18000, 1.3,  0.4]
+          2.9  : [17000, 1.3,  0.4]
+          3.0  : [17000, 1.3,  0.2]
+          3.1  : [16000, 1.3,  0.2]
+          3.175: [16000, 1.3,  0.2]

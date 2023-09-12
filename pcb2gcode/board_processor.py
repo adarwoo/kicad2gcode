@@ -94,7 +94,7 @@ def tocoord(x, y):
     """ @return A traditional coordinate given in Units """
     return Coordinate(
         nm(x - tocoord.offset.x),
-        nm(-tocoord.offset.y - y)
+        nm(tocoord.offset.y - y)
     )
 
 
@@ -109,8 +109,17 @@ class BoardProcessor:
 
         self.inventory = Inventory()
 
+        # Work out the bounding box
+        bounding_box = board.ComputeBoundingBox()
+        tocoord.offset = bounding_box.GetPosition()
+        tocoord.offset.x = bounding_box.GetLeft()
+        tocoord.offset.y = bounding_box.GetBottom()
+
         # Work out the offset (in KiCAD coordinates)
-        tocoord.offset = board.GetDesignSettings().GetAuxOrigin()
+
+        # Store the number of copper layers in the context
+        ctx.copper_layer_count = board.GetCopperLayerCount()
+
 
         # Start with the pads
         self.process_pads(board.GetPads())
