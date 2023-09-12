@@ -132,3 +132,7 @@ class Inventory:
 
             # Append an oblong hole
             self._add_hole(Oblong(hole_width, start, end), pth)
+
+    def add_edge_element(self, element):
+        """ """
+        pass

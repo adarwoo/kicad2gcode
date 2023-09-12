@@ -120,11 +120,15 @@ class BoardProcessor:
         # Store the number of copper layers in the context
         ctx.copper_layer_count = board.GetCopperLayerCount()
 
-
         # Start with the pads
         self.process_pads(board.GetPads())
+
+        # Then vias
         self.process_vias(
             [t for t in board.GetTracks() if t.Type() == PCB_VIA_T])
+
+        # Finally - for now - contours
+        self.process_edge_shapes(board.GetDrawings())
 
     def process_pads(self, pads):
         """ Grab all pads from all footprints and add to the inventory """
@@ -161,3 +165,34 @@ class BoardProcessor:
             x, y = via.GetStart()
 
             self.inventory.add_hole(tocoord(x, y), nm(hole_sz))
+
+    def process_edge_shapes(self, shapes):
+        """ Grab all edge drawing elements """
+        for shape in shapes:
+            if shape.GetLayerName() == "Edge.Cuts":
+                shape_type = shape.SHAPE_T_asString()
+
+                if shape_type == "S_ARC":
+                    self.append_arc(shape)
+                elif shape_type == "S_SEGMENT":
+                    self.append_segment(shape)
+                elif shape_type == "S_CIRCLE":
+                    self.append_circle(shape)
+                else:
+                    logger.error("Not supported yet - work in progress")
+
+    def append_segment(self, segment):
+        start = segment.GetStart()
+        end = segment.GetEnd()
+        logger.debug(f"Segment: {start}, {end}")
+
+    def append_arc(self, arc):
+        angle = arc.GetArcAngle().AsDegrees()
+        centre = arc.GetCenter()
+        diameter = arc.GetRadius() * 2
+        logger.debug(f"Arc: {angle}, {centre}, {diameter}")
+
+    def append_circle(self, circle):
+        start = circle.GetStart()
+        diameter = circle.GetRadius() * 2
+        logger.debug(f"Circle: {start}, {diameter}")
