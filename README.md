@@ -1,4 +1,4 @@
-# pcb2gcode
+# kicad2gcode
 
 This project aims at providing a highly customisable tool to generate some GCode
 for any CNC directly from a KiCAD PCB file.
