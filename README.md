@@ -72,9 +72,16 @@ Options:
 
 ## Contributing
 
-My objective is to get a working application by Sept 2023. This should machine
+My objective is to get a working application by November 2023. This should machine
 holes and outlines (pth and npth).
-The architecture has been thought also allow for engraving. But I have no need
+The outiline routing is turning out far more complex than I had anticipated, since 
+the output data from KiCAD are dijointed segments, requiring to re-create a closed
+geometry using Eulerian Path and other graph theory. As KiCAD supports non-linear 
+geometry, this is made even hardware, and require some approximation.
+I am using the work from https://github.com/pcb2gcode/pcb2gcode (which relies on Gerber
+data) for inspiration - both making it Pythonic. 
+The effort is also helping the project move towards being able to engrave PCBs and 
+promoting an architecture which should allow for engraving. But I have no need
 for engraving for now as I etch PCBs.
 Let me know if you are interrested in contributing.
 The tests do not provide 100% coverage yet and the code could be cleaned up too.
