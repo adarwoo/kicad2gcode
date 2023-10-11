@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# This file is part of the pcb2gcode distribution (https://github.com/adarwoo/pcb2gcode).
+# This file is part of the kicad2gcode distribution (https://github.com/adarwoo/kicad2gcode).
 # Copyright (c) 2023 Guillaume ARRECKX (software@arreckx.com).
 #
 # This program is free software: you can redistribute it and/or modify
@@ -17,8 +17,12 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 """ Version definition """
+import sys
 
 # read version from installed package
-from importlib.metadata import version
+if sys.version_info >= (3, 8):
+    from importlib.metadata import metadata
+else:
+    from importlib_metadata import metadata
 
-__version__ = version("pcb2gcode")
+__version__ = metadata("kicad2gcode")["version"]

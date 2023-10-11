@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# This file is part of the pcb2gcode distribution (https://github.com/adarwoo/pcb2gcode).
+# This file is part of the kicad2gcode distribution (https://github.com/adarwoo/kicad2gcode).
 # Copyright (c) 2023 Guillaume ARRECKX (software@arreckx.com).
 #
 # This program is free software: you can redistribute it and/or modify
@@ -18,8 +18,8 @@
 #
 
 import numpy
-from pcb2gcode.units import mm
-from pcb2gcode.coordinate import Coordinate
+from kicad2gcode.units import mm
+from kicad2gcode.coordinate import Coordinate
 
 
 def test_basic():

@@ -40,10 +40,10 @@ If you are proposing a feature:
 
 ## Get Started!
 
-Ready to contribute? Here's how to set up `pcb2gcode` for local development.
+Ready to contribute? Here's how to set up `kicad2gcode` for local development.
 
-1. Download a copy of `pcb2gcode` locally.
-2. Install `pcb2gcode` using `poetry`:
+1. Download a copy of `kicad2gcode` locally.
+2. Install `kicad2gcode` using `poetry`:
 
     ```console
     $ poetry install
@@ -69,5 +69,5 @@ Before you submit a pull request, check that it meets these guidelines:
 
 ## Code of Conduct
 
-Please note that the `pcb2gcode` project is released with a
+Please note that the `kicad2gcode` project is released with a
 Code of Conduct. By contributing to this project you agree to abide by its terms.

@@ -3,7 +3,7 @@ title: "rack schema"
 revision: "1.0"
 type: object
 description: |
-  pcb2gcode rack(s) description and selection
+  kicad2gcode rack(s) description and selection
 
   Note: You may edit this file, but it may be regenerated.
   During the regenerations, exiting comments and settings are preserved where

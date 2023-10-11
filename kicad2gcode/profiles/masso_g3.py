@@ -1,8 +1,8 @@
 from time import strftime
 
-from pcb2gcode.cutting_tools import CutDir, CuttingTool
-from pcb2gcode.units import Length, FeedRate, Rpm, mm, mm_min
-from pcb2gcode.context import ctx
+from kicad2gcode.cutting_tools import CutDir, CuttingTool
+from kicad2gcode.units import Length, FeedRate, Rpm, mm, mm_min
+from kicad2gcode.context import ctx
 
 
 def header():
@@ -10,7 +10,7 @@ def header():
     Called to create the header of the gcode file
     """
     yield f"""
-        (Created by pcb2gcode from '{ctx.pcb_filename}' - {strftime("%Y-%m-%d %H:%M:%S")})
+        (Created by kicad2gcode from '{ctx.pcb_filename}' - {strftime("%Y-%m-%d %H:%M:%S")})
         (Reset all back to safe defaults)
         G17 G54 G40 G49 G80 G90
         G21

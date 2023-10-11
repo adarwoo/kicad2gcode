@@ -1,4 +1,4 @@
-# pcb2gcode
+# kicad2gcode
 
 This project aims at providing a highly customisable tool to generate some GCode
 for any CNC directly from a KiCAD PCB file.
@@ -48,18 +48,18 @@ manufacturing data and the CNC capability.
 ## Installation
 The intent is to host it on pip -that's outstanding too.
 ```bash
-$ pip install pcb2gcode
+$ pip install kicad2gcode
 ```
 
 ## Usage
 
 ```
-Usage: pcb2gcode [OPTIONS] FILENAME
+Usage: kicad2gcode [OPTIONS] FILENAME
 
   A utility which take a KiCAD v7 PCB and creates the GCode for a CNC to drill
   and route the PCB. The utility is heavily configurable. The initial set of
   configuration files is create the first time the utility runs. You can then
-  edit them. The default path is ~/.pcb2gcode.
+  edit them. The default path is ~/.kicad2gcode.
 
 Options:
   -p, --pth              Drill and route all requiring plating.
@@ -74,13 +74,13 @@ Options:
 
 My objective is to get a working application by November 2023. This should machine
 holes and outlines (pth and npth).
-The outiline routing is turning out far more complex than I had anticipated, since 
+The outiline routing is turning out far more complex than I had anticipated, since
 the output data from KiCAD are dijointed segments, requiring to re-create a closed
-geometry using Eulerian Path and other graph theory. As KiCAD supports non-linear 
+geometry using Eulerian Path and other graph theory. As KiCAD supports non-linear
 geometry, this is made even hardware, and require some approximation.
-I am using the work from https://github.com/pcb2gcode/pcb2gcode (which relies on Gerber
-data) for inspiration - both making it Pythonic. 
-The effort is also helping the project move towards being able to engrave PCBs and 
+I am using the work from https://github.com/kicad2gcode/kicad2gcode (which relies on Gerber
+data) for inspiration - both making it Pythonic.
+The effort is also helping the project move towards being able to engrave PCBs and
 promoting an architecture which should allow for engraving. But I have no need
 for engraving for now as I etch PCBs.
 Let me know if you are interrested in contributing.
@@ -88,9 +88,9 @@ The tests do not provide 100% coverage yet and the code could be cleaned up too.
 
 ## License
 
-`pcb2gcode` was created by Guillaume ARRECKX.
+`kicad2gcode` was created by Guillaume ARRECKX.
 It is licensed under the terms of the GNU General Public License v3.0 license.
 
 ## Credits
 
-`pcb2gcode` was created with [`cookiecutter`](https://cookiecutter.readthedocs.io/en/latest/) and the `py-pkgs-cookiecutter` [template](https://github.com/py-pkgs/py-pkgs-cookiecutter).
+`kicad2gcode` was created with [`cookiecutter`](https://cookiecutter.readthedocs.io/en/latest/) and the `py-pkgs-cookiecutter` [template](https://github.com/py-pkgs/py-pkgs-cookiecutter).

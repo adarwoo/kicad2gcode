@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# This file is part of the pcb2gcode distribution (https://github.com/adarwoo/pcb2gcode).
+# This file is part of the kicad2gcode distribution (https://github.com/adarwoo/kicad2gcode).
 # Copyright (c) 2023 Guillaume ARRECKX (software@arreckx.com).
 #
 # This program is free software: you can redistribute it and/or modify
@@ -16,9 +16,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-from pcb2gcode.rack import Rack
-from pcb2gcode.cutting_tools import DrillBit, RouterBit
-from pcb2gcode.units import mm
+from kicad2gcode.rack import Rack
+from kicad2gcode.cutting_tools import DrillBit, RouterBit
+from kicad2gcode.units import mm
 
 
 def test_manual():

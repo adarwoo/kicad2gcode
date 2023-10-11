@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# This file is part of the pcb2gcode distribution (https://github.com/adarwoo/pcb2gcode).
+# This file is part of the kicad2gcode distribution (https://github.com/adarwoo/kicad2gcode).
 # Copyright (c) 2023 Guillaume ARRECKX (software@arreckx.com).
 #
 # This program is free software: you can redistribute it and/or modify
@@ -23,14 +23,14 @@ from pathlib import Path
 
 import pytest
 
-from pcb2gcode.machining import Machining
-from pcb2gcode.operations import Operations
+from kicad2gcode.machining import Machining
+from kicad2gcode.operations import Operations
 
 
 @pytest.mark.skipif('CODESPACES' in os.environ or 'CI' in os.environ, reason="No KiCAD setup in CI")
 def test_simple_file():
     """ Test real life situation with a test PCB """
-    from pcb2gcode.board_processor import BoardProcessor
+    from kicad2gcode.board_processor import BoardProcessor
 
     # Load from this folder
     this_path = Path(__file__).resolve().parent

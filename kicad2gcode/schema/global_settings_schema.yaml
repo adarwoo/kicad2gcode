@@ -30,7 +30,7 @@ properties:
         description: "Minimum spindle speed in RPM"
         unit: rpm
         anyOf:
-          - type: "number"
+          - type: number
           - &rpm_string
             type: "string"
             pattern: "^(?:\\d+(?:\\.\\d+)?)(?:rpm)$"
@@ -42,7 +42,7 @@ properties:
         anyOf:
           - type: number
           - *rpm_string
-        default: 24000
+        default: 56000
         minimum: 0
     required: [min, max]
     description: "Practical spindle limits in RPM"
@@ -113,7 +113,8 @@ properties:
     description: |
       Z distance to retract to between machining operations. This distance should
       be well clear of fixtures on the machining table to avoid collisions.
-      The Z0 correspond to the machining bed.
+      WARNING: The Z0 correspond to the machining bed. So it can be set from machine
+      coordinates and does not need adjusting.
     unit: length
     anyOf:
       - type: number
@@ -157,7 +158,12 @@ properties:
         minimum: 1
     required: [max_length_to_bit_diameter, pecks_per_hole]
   oversizing_allowance_percent:
-    description: "Allowance for drilling a slightly larger hole"
+    description: |
+      Allowance for drilling a slightly larger hole and to allow finding the
+      nearest hole size. If you set this to 0, the size must be a perfect match
+      and you increase the number of tool changes.
+      Make sure that the oversizing and downsizing allowance cover for intermediate
+      sizes for through holes as some of the footprints may not use standard metric sizes.
     anyOf:
       - &percent_number
         type: "number"
@@ -166,14 +172,17 @@ properties:
       - &percent_string
         type: "string"
         pattern: "^(?:0*\\d{1,2}|0*1\\d{2}|0*200)%?$"
-    default: 5
+    default: 3
     minimum: 0
   downsizing_allowance_percent:
-    description: "Allowance for drilling a slightly smaller hole"
+    description: |
+      Allowance for drilling a slightly smaller hole. Smaller means the copper
+      ring thickness is increased, but the hole is smaller, which could be
+      a problem for through parts
     anyOf:
       - *percent_number
       - *percent_string
-    default: 10
+    default: 4
     minimum: 0
   router_diameter_for_contour:
     description: "Preferred routing bit size for routing the contour of the board"
@@ -181,9 +190,12 @@ properties:
     anyOf:
       - type: number
       - *length_string
-    default: 1.6mm
+    default: 2.0mm
   backboard_thickness:
-    description: "Thickness of the back/martyr/exit-board"
+    description: |
+      Thickness of the back/martyr/exit-board.
+      WARNING: Make sure this value is always accurate, otherwise, you run the
+      risk of drilling into the machining bed.
     unit: length
     default: 2.5mm
   gcode:

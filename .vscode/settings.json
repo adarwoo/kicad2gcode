@@ -11,5 +11,5 @@
         "--disable=broad-exception-caught",
         "--disable=import-outside-toplevel",
     ],
-    "svn.ignoreMissingSvnWarning": true
+    "svn.ignoreMissingSvnWarning": true,
 }

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# This file is part of the pcb2gcode distribution (https://github.com/adarwoo/pcb2gcode).
+# This file is part of the kicad2gcode distribution (https://github.com/adarwoo/kicad2gcode).
 # Copyright (c) 2023 Guillaume ARRECKX (software@arreckx.com).
 #
 # This program is free software: you can redistribute it and/or modify
@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
-""" 
+"""
 List machining operations for a PCB.
 
     - PTH stands for Platted Through Hole.
@@ -37,11 +37,11 @@ List machining operations for a PCB.
         * Tabs can be added, so the larger board can be used for:
         - applying solder paste
         - testing the board
-    
+
     - ALL is typically for single sided board which are etched and don't need PTH
         * Most holes are still identified as PTH but are drilled along with NPTH
         * Final routing is applied too
-    
+
     - FIRST is the same of PTH
 
     - FINAL is to do the final drills and route the contour.
@@ -56,7 +56,7 @@ class Operations(IntEnum):
     PTH = 0b0001        # Includes routing oblongs
     NPTH = 0b0010       # Includes routing oblongs
     OUTLINE = 0b0100    # Only routing of the outline
-    
+
     FIRST = PTH
     FINAL = NPTH | OUTLINE
     ALL = FIRST | FINAL

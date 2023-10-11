@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# This file is part of the pcb2gcode distribution (https://github.com/adarwoo/pcb2gcode).
+# This file is part of the kicad2gcode distribution (https://github.com/adarwoo/kicad2gcode).
 # Copyright (c) 2023 Guillaume ARRECKX (software@arreckx.com).
 #
 # This program is free software: you can redistribute it and/or modify
@@ -19,10 +19,10 @@
 """ Unit test for the units.py module """
 import pytest
 
-from pcb2gcode.units import Unit, Length, FeedRate, Angle, Rpm
-from pcb2gcode.units import cm_min, mm_min, in_min, inch_min, m_min, ipm
-from pcb2gcode.units import deg, degree, rpm
-from pcb2gcode.units import mm, cm, um, inch, mil, thou
+from kicad2gcode.units import Unit, Length, FeedRate, Angle, Rpm
+from kicad2gcode.units import cm_min, mm_min, in_min, inch_min, m_min, ipm
+from kicad2gcode.units import deg, degree, rpm
+from kicad2gcode.units import mm, cm, um, inch, mil, thou
 
 
 def test_simple():

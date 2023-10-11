@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# This file is part of the pcb2gcode distribution (https://github.com/adarwoo/pcb2gcode).
+# This file is part of the kicad2gcode distribution (https://github.com/adarwoo/kicad2gcode).
 # Copyright (c) 2023 Guillaume ARRECKX (software@arreckx.com).
 #
 # This program is free software: you can redistribute it and/or modify
@@ -47,6 +47,7 @@ import re
 from pathlib import Path
 
 import jsonschema
+
 import ruamel.yaml
 from ruamel.yaml.comments import CommentedMap, CommentedSeq
 
@@ -197,11 +198,15 @@ class YamlConfigManager:
     def load_content(self):
         """
         Load the actual Yaml content file
-        All errors (file, access control, parsing, schema) are reported in the log
-        If he file is invalid, it is renamed.
+        All errors (file, access control, parsing, schema) are reported in the log.
+        If a file parses OK, but fail to validate, attempt to merge it with the default
+        and check if OK afterwards. This is for cases where it lacks some default values.
+        If OK, save it, and create a backup copy.
+        If he file is invalid, use the default values and log the error.
         This function does not recreate a file just yet.
         """
         retval = {}
+        is_valid_yaml = False
 
         try:
             if not self.config_file_path.exists():
@@ -218,7 +223,9 @@ class YamlConfigManager:
         # Parse it!
         try:
             with open(self.config_file_path, encoding="utf-8") as stream:
-                retval = self.yaml.load(stream)
+                yaml = ruamel.yaml.YAML(typ='rt', pure=True)
+                retval = yaml.load(stream)
+                is_valid_yaml = True
                 jsonschema.validate(retval, self.schema)
 
             return retval
@@ -234,7 +241,25 @@ class YamlConfigManager:
             logger.error("Failed to interpret the content of '%s'", self.config_file_path)
             logger.error("Got: %s", exception)
 
+        def synchronize_dicts(dict1, dict2):
+            result = dict2.copy()
+
+            for key, value in dict1.items():
+                if key in result:
+                    if isinstance(value, dict) and isinstance(result[key], dict):
+                        result[key] = synchronize_dicts(value, result[key])
+                    else:
+                        result[key] = value
+                else:
+                    result.pop(key, None)
+
+            return result
+
         # Since we failed to include the file succesfully
+        if is_valid_yaml:
+            # Merge with the default
+            retval = synchronize_dicts(retval, self.generate_default_content())
+
         # Rename this one to make room for a fresh one
         newname = self.config_file_path.with_suffix(YAML_FILE_RENAME_SUFFIX)
 
@@ -299,14 +324,12 @@ class YamlConfigManager:
         @param section_name The name of section of configuration to handle such as 'racks'
         """
         from os.path import expanduser
-        from ruamel.yaml import YAML
 
         self.section_name = section_name
         self.config_file_path = Path(
             expanduser(CONFIG_USER_PATH) / Path(section_name + ".yaml")
         )
 
-        self.yaml = YAML()
         self.schema, self.validator = self.load_schema()
         self.content = self.load_content()
 

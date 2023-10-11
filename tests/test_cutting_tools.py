@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# This file is part of the pcb2gcode distribution (https://github.com/adarwoo/pcb2gcode).
+# This file is part of the kicad2gcode distribution (https://github.com/adarwoo/kicad2gcode).
 # Copyright (c) 2023 Guillaume ARRECKX (software@arreckx.com).
 #
 # This program is free software: you can redistribute it and/or modify
@@ -16,10 +16,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-from pcb2gcode.cutting_tools import DrillBit, RouterBit, CutDir, CuttingTool
-from pcb2gcode.units import mm, rpm, mm_min, degree, inch, um
+from kicad2gcode.cutting_tools import DrillBit, RouterBit, CutDir, CuttingTool
+from kicad2gcode.units import mm, rpm, mm_min, degree, inch, um
 # pylint: disable=E0611 # The module is fully dynamic
-from pcb2gcode.config import stock, global_settings as gs
+from kicad2gcode.config import stock, global_settings as gs
 
 
 def test_basic(monkeypatch):
@@ -66,8 +66,15 @@ def test_basic(monkeypatch):
     assert rb.table_feed  == mm_min(500)
 
 
-def test_stock():
+def test_stock(monkeypatch):
     """ Test accessing bits from the stock """
+
+    # Override the stock for this test
+    #monkeypatch.setitem(gs["oversizing_allowance_percent"], 10)
+    #monkeypatch.setitem(gs["downsizing_allowance_percent"], 10)
+    #monkeypatch.setitem(stock["drillbits"], [0.6*mm, 0.7*mm, 0.8*mm])
+    #monkeypatch.setitem(stock["routerbits"], [1.4*mm, 1.5*mm, 1.6*mm])
+
     v = DrillBit.get_from_stock(0.71 * mm)
     assert v.diameter == 0.7*mm
 

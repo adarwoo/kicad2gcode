@@ -4,4 +4,4 @@
 
 ## v0.1 (17/08/2023)
 
-- First release of `pcb2gcode`!
+- First release of `kicad2gcode`!

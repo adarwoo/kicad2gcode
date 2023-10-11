@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# This file is part of the pcb2gcode distribution (https://github.com/adarwoo/pcb2gcode).
+# This file is part of the kicad2gcode distribution (https://github.com/adarwoo/kicad2gcode).
 # Copyright (c) 2023 Guillaume ARRECKX (software@arreckx.com).
 #
 # This program is free software: you can redistribute it and/or modify
@@ -31,7 +31,7 @@ THIS_PATH = Path(__file__).parent
 SCHEMA_PATH = THIS_PATH / "schema"
 
 # Default location to look for yaml configuration files
-CONFIG_USER_PATH = "~/.pcb2gcode"
+CONFIG_USER_PATH = "~/.kicad2gcode"
 
 # Suffix added to schema files
 SCHEMA_FILE__FILENAME_SUFFIX="_schema.yaml"

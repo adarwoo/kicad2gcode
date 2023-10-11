@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# This file is part of the pcb2gcode distribution (https://github.com/adarwoo/pcb2gcode).
+# This file is part of the kicad2gcode distribution (https://github.com/adarwoo/kicad2gcode).
 # Copyright (c) 2023 Guillaume ARRECKX (software@arreckx.com).
 #
 # This program is free software: you can redistribute it and/or modify
@@ -128,8 +128,9 @@ class CuttingTool:
     @classmethod
     def get_from_stock(cls, diameter):
         """
-        Grab a stock object which is the closest to the required size
-        The selection will involve the configuration
+        Grab a stock object which is the closest to the required size, within
+        allowed margins.
+        The selection will involve the configuration, stock and global
         @return A stock item object or None if no items could be matched
         """
         variation = min_so_far = diameter

@@ -24,7 +24,7 @@ jobs:
         run: poetry install
 
       - name: Test with pytest
-        run: poetry run pytest tests/ --cov=pcb2gcode --cov-branch
+        run: poetry run pytest tests/ --cov=kicad2gcode --cov-branch
 
       - name: Use Codecov to track coverage
         uses: codecov/codecov-action@v3

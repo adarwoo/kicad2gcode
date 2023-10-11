@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# This file is part of the pcb2gcode distribution (https://github.com/adarwoo/pcb2gcode).
+# This file is part of the kicad2gcode distribution (https://github.com/adarwoo/kicad2gcode).
 # Copyright (c) 2023 Guillaume ARRECKX (software@arreckx.com).
 #
 # This program is free software: you can redistribute it and/or modify
@@ -47,13 +47,13 @@ from .rack import RackManager
    help='Specify an output file name. Defaults to stdout')
 @click.argument('filename', type=click.Path(exists=True, readable=True))
 @click.pass_context
-def pcb2gcode(*_, **kwargs):
+def kicad2gcode(*_, **kwargs):
    """
    A utility which take a KiCAD v7 PCB and creates the GCode
    for a CNC to drill and route the PCB.
    The utility is heavily configurable. The initial set of configuration files
    is create the first time the utility runs.
-   You can then edit them. The default path is ~/.pcb2gcode.
+   You can then edit them. The default path is ~/.kicad2gcode.
    """
    ops = Operations.NONE
 
@@ -108,4 +108,4 @@ def pcb2gcode(*_, **kwargs):
 
 
 if __name__ == '__main__':
-    pcb2gcode()
+    kicad2gcode()
