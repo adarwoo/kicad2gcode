@@ -27,7 +27,7 @@ from pcb2gcode.machining import Machining
 from pcb2gcode.operations import Operations
 
 
-@pytest.mark.skipif('CI' in os.environ, reason="No KiCAD setup in CI")
+@pytest.mark.skipif('CODESPACES' in os.environ or 'CI' in os.environ, reason="No KiCAD setup in CI")
 def test_simple_file():
     """ Test real life situation with a test PCB """
     from pcb2gcode.board_processor import BoardProcessor
