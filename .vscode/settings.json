@@ -4,6 +4,8 @@
     ],
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
+    "pytest.command": "poetry run pytest",
+    "python.testing.autoTestDiscoverOnSaveEnabled": true,
     "[python]": {
         "editor.defaultFormatter": "ms-python.python"
     },

@@ -204,74 +204,95 @@ class YamlConfigManager:
         If OK, save it, and create a backup copy.
         If he file is invalid, use the default values and log the error.
         This function does not recreate a file just yet.
+        @return True if the content is loaded OK
         """
-        retval = {}
-        is_valid_yaml = False
+        def synchronize_dicts(source, ref):
+            result = ref.copy()
 
-        try:
-            if not self.config_file_path.exists():
-                logger.info(
-                    "Configuration file '%s' is missing and will be created.",
-                    self.config_file_path
-                )
-
-                return retval
-        except PermissionError:
-            logger.info("Configuration file '%s' cannot be accessed.", self.config_file_path)
-            return retval
-
-        # Parse it!
-        try:
-            with open(self.config_file_path, encoding="utf-8") as stream:
-                yaml = ruamel.yaml.YAML(typ='rt', pure=True)
-                retval = yaml.load(stream)
-                is_valid_yaml = True
-                jsonschema.validate(retval, self.schema)
-
-            return retval
-        except OSError:
-            logger.error("File '%s' could not be opened!", self.config_file_path)
-        except ruamel.yaml.YAMLError as exception:
-            logger.error("File '%s' is not a valid Yaml document!", self.config_file_path)
-            logger.error(exception)
-        except jsonschema.ValidationError as exc:
-            logger.error("File '%s' is not structured correctly!", self.config_file_path)
-            logger.info("Details:\n%s", exc)
-        except Exception as exception:
-            logger.error("Failed to interpret the content of '%s'", self.config_file_path)
-            logger.error("Got: %s", exception)
-
-        def synchronize_dicts(dict1, dict2):
-            result = dict2.copy()
-
-            for key, value in dict1.items():
-                if key in result:
+            for key, value in ref.items():
+                if key in source:
                     if isinstance(value, dict) and isinstance(result[key], dict):
-                        result[key] = synchronize_dicts(value, result[key])
+                        result[key] = synchronize_dicts(source[key], value)
                     else:
-                        result[key] = value
-                else:
-                    result.pop(key, None)
+                        result[key] = source[key]
 
             return result
 
-        # Since we failed to include the file succesfully
-        if is_valid_yaml:
-            # Merge with the default
-            retval = synchronize_dicts(retval, self.generate_default_content())
+        def file_exists():
+            retval = False
+            
+            try:
+                if self.config_file_path.exists():
+                    retval = True
+                else:
+                    logger.info(
+                        "Configuration file '%s' is missing and will be created.",
+                        self.config_file_path
+                    )
+            except PermissionError:
+                logger.info("Configuration file '%s' cannot be accessed.", self.config_file_path)
+                
+            return retval
+                     
+        def parse():
+            content = {}
+            
+            try: # Parse it!
+               with open(self.config_file_path, encoding="utf-8") as stream:
+                  yaml = ruamel.yaml.YAML(typ='rt', pure=True)
+                  content = yaml.load(stream)
+            except OSError:
+                logger.error("File '%s' could not be opened!", self.config_file_path)
+            except ruamel.yaml.YAMLError as exception:
+                logger.error("File '%s' is not a valid Yaml document!", self.config_file_path)
+                logger.error(exception)
+            except Exception as exception:
+                logger.error("Failed to interpret the content of '%s'", self.config_file_path)
+                logger.error("Got: %s", exception)
+                
+            return content
+                  
+        def validate(content):
+            try:
+                jsonschema.validate(content, self.schema)
+            except jsonschema.ValidationError as exc:
+                logger.error("File '%s' is not structured correctly!", self.config_file_path)
+                logger.info("Details:\n%s", exc)
+                return False
 
-        # Rename this one to make room for a fresh one
-        newname = self.config_file_path.with_suffix(YAML_FILE_RENAME_SUFFIX)
+            return True
+        
+        def backup():
+            # Rename this one to make room for a fresh one
+            newname = self.config_file_path.with_suffix(YAML_FILE_RENAME_SUFFIX)
 
-        try:
-            retval = {}
-            logger.warning("Renaming the file %s", newname)
-            self.config_file_path.replace(newname)
-        except Exception as exception:
-            logger.error("Failed to rename the file '%s' to '%s'", self.config_file_path, newname)
-            logger.error("Got: %s", exception)
+            try:
+                logger.warning("Renaming the file %s", newname)
+                self.config_file_path.replace(newname)
+            except Exception as exception:
+                logger.error("Failed to rename the file '%s' to '%s'", self.config_file_path, newname)
+                logger.error("Got: %s", exception)
+                return False
 
-        return retval
+            return True
+           
+        overwrite = True
+        
+        if file_exists():
+            self.content = parse()
+            
+            if self.content:
+                if validate(self.content):
+                    overwrite = False
+                else:
+                    self.content = synchronize_dicts(self.content, self.generate_default_content())
+            else:
+                self.content = self.generate_default_content()
+
+        if overwrite:
+            if backup():
+                self.write_content()
+
 
     def generate_default_content(self):
         """ Generate a default content in memory """
@@ -304,7 +325,8 @@ class YamlConfigManager:
 
         try:
             with open(self.config_file_path, 'w', encoding="utf-8") as content_file:
-                self.yaml.dump(self.content, content_file)
+                yaml = ruamel.yaml.YAML(typ='rt', pure=True)
+                yaml.dump(self.content, content_file)
         except Exception as exception:
             logger.error(
                 "Failed to create a default configuration file '%s'",
@@ -331,12 +353,7 @@ class YamlConfigManager:
         )
 
         self.schema, self.validator = self.load_schema()
-        self.content = self.load_content()
-
-        if self.content == {}:
-            self.content = self.generate_default_content()
-            self.write_content()
-
+        self.load_content()
         self.convert_values_to_units(self.content, self.schema)
 
     def get_content(self):
