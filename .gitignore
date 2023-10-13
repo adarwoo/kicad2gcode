@@ -142,4 +142,4 @@ dmypy.json
 .DS_Store
 avirer.nc
 
-kicad2gcode/pcbnew
+kicad2gcode/pcbnew/*
