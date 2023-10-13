@@ -70,10 +70,10 @@ def test_stock(monkeypatch):
     """ Test accessing bits from the stock """
 
     # Override the stock for this test
-    #monkeypatch.setitem(gs["oversizing_allowance_percent"], 10)
-    #monkeypatch.setitem(gs["downsizing_allowance_percent"], 10)
-    #monkeypatch.setitem(stock["drillbits"], [0.6*mm, 0.7*mm, 0.8*mm])
-    #monkeypatch.setitem(stock["routerbits"], [1.4*mm, 1.5*mm, 1.6*mm])
+    monkeypatch.setitem(gs, "oversizing_allowance_percent", 10)
+    monkeypatch.setitem(gs, "downsizing_allowance_percent", 10)
+    monkeypatch.setitem(stock, "drillbits", [0.6*mm, 0.7*mm, 0.8*mm])
+    monkeypatch.setitem(stock, "routerbits", [1.4*mm, 1.5*mm, 1.6*mm])
 
     v = DrillBit.get_from_stock(0.71 * mm)
     assert v.diameter == 0.7*mm
@@ -84,11 +84,21 @@ def test_stock(monkeypatch):
 
 def test_request(monkeypatch):
     """ Test requesting cutting tools from the stock """
+    # Override the stock for this test
+    monkeypatch.setitem(gs, "oversizing_allowance_percent", 10)
+    monkeypatch.setitem(gs, "downsizing_allowance_percent", 10)
+    monkeypatch.setitem(stock, "drillbits", [0.6*mm, 0.7*mm, 2.0*mm])
+    monkeypatch.setitem(stock, "routerbits", [0.9*mm, 1.5*mm, 1.6*mm])
+    monkeypatch.setitem(gs, "router_diameter_for_contour", 2.0*mm)
+    
     v_ok = CuttingTool.request(DrillBit(2*mm))
     assert v_ok and v_ok.type is DrillBit and v_ok.diameter == 2*mm
 
-    v_ok = CuttingTool.request(RouterBit(0.8*mm))
-    assert v_ok and v_ok.type is RouterBit and v_ok.diameter == 0.8*mm
+    v_fail = CuttingTool.request(RouterBit(0.84*mm))
+    assert v_fail is None
+
+    v_ok = CuttingTool.request(RouterBit(0.94*mm))
+    assert v_ok and v_ok.type is RouterBit and v_ok.diameter == 0.9*mm
 
     # Too big
     v_fail = CuttingTool.request(RouterBit(1*inch))
@@ -102,13 +112,9 @@ def test_request(monkeypatch):
     assert v_fail is None
 
     # Force routing
-    v_fail = CuttingTool.request(DrillBit(1/2*inch))
-    assert v_fail and v_fail.type is RouterBit and v_fail.diameter == 1.6*mm
+    v_router = CuttingTool.request(DrillBit(1/2*inch))
+    assert v_router and v_router.type is RouterBit and v_router.diameter == 2.0*mm
 
-    # Remove all router from stock
-    monkeypatch.setitem(stock, "routerbits", [1*mm])
-    monkeypatch.setitem(stock, "drillbits", [0.5*mm])
-
-    # Since the only bit is 0.5mm and the tolerance 10% - and since it cannot be routed - fail
-    v_fail = CuttingTool.request(DrillBit(0.75*mm))
+    # Since the nearest bit is 0.7mm and the tolerance 10% - and since it cannot be routed - fail
+    v_fail = CuttingTool.request(DrillBit(0.8*mm))
     assert v_fail is None
