@@ -277,8 +277,9 @@ class YamlConfigManager:
             return True
            
         overwrite = True
+        file_exists = file_exists()
         
-        if file_exists():
+        if file_exists:
             self.content = parse()
             
             if self.content:
@@ -288,9 +289,12 @@ class YamlConfigManager:
                     self.content = synchronize_dicts(self.content, self.generate_default_content())
             else:
                 self.content = self.generate_default_content()
+        else:
+            # No file
+            self.content = self.generate_default_content()
 
         if overwrite:
-            if backup():
+            if (not file_exists) or backup():
                 self.write_content()
 
 
