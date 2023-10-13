@@ -141,5 +141,3 @@ dmypy.json
 # MacOS
 .DS_Store
 avirer.nc
-
-kicad2gcode/pcbnew/*
