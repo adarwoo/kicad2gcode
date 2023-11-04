@@ -18,8 +18,8 @@
 #
 
 import numpy
-from kicad2gcode.units import mm
-from kicad2gcode.coordinate import Coordinate
+from k2g.units import mm
+from k2g.coordinate import Coordinate
 
 
 def test_basic():

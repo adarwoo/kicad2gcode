@@ -1,8 +1,8 @@
 from time import strftime
 
-from kicad2gcode.cutting_tools import CutDir, CuttingTool
-from kicad2gcode.units import Length, FeedRate, Rpm, mm, mm_min
-from kicad2gcode.context import ctx
+from k2g.cutting_tools import CutDir, CuttingTool
+from k2g.units import Length, FeedRate, Rpm, mm, mm_min
+from k2g.context import ctx
 
 
 def header():

@@ -47,7 +47,7 @@ from .rack import RackManager
    help='Specify an output file name. Defaults to stdout')
 @click.argument('filename', type=click.Path(exists=True, readable=True))
 @click.pass_context
-def kicad2gcode(*_, **kwargs):
+def main(*_, **kwargs):
    """
    A utility which take a KiCAD v7 PCB and creates the GCode
    for a CNC to drill and route the PCB.

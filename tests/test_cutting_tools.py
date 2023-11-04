@@ -16,10 +16,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-from kicad2gcode.cutting_tools import DrillBit, RouterBit, CutDir, CuttingTool
-from kicad2gcode.units import mm, rpm, mm_min, degree, inch, um
+from k2g.cutting_tools import DrillBit, RouterBit, CutDir, CuttingTool
+from k2g.units import mm, rpm, mm_min, degree, inch, um
 # pylint: disable=E0611 # The module is fully dynamic
-from kicad2gcode.config import stock, global_settings as gs
+from k2g.config import stock, global_settings as gs
 
 
 def test_basic(monkeypatch):

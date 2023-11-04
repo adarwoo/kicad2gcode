@@ -1,11 +1,11 @@
 [tool.poetry]
-name = "kicad2gcode"
+name = "k2g"
 version = "0.1"
 description = "A tool to convert KiCad PCB file to a CNC GCode"
 authors = ["Guillaume ARRECKX <software@arreckx.com>"]
 license = "GNU General Public License v3.0"
 readme = "README.md"
-packages = [{include = "kicad2gcode"}]
+packages = [{include = "k2g"}]
 
 [tool.poetry.dependencies]
 python = "^3.9"
@@ -18,9 +18,11 @@ kiutils = "^1.4.4"
 numpy = "^1.25.2"
 click = "^8.1.7"
 pygeos = "^0.14"
+wxpython = "^4.2.1"
 
 [tool.poetry.scripts]
-kicad2gcode = "kicad2gcode.kicad2gcode:kicad2gcode"
+k2gcli = "k2g.cli:main"
+k2g = "k2g.ui:main"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.0"

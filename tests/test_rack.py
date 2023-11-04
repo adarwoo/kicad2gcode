@@ -16,9 +16,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-from kicad2gcode.rack import Rack
-from kicad2gcode.cutting_tools import DrillBit, RouterBit
-from kicad2gcode.units import mm
+from k2g.rack import Rack
+from k2g.cutting_tools import DrillBit, RouterBit
+from k2g.units import mm
 
 
 def test_manual():

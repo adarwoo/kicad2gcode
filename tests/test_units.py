@@ -19,10 +19,10 @@
 """ Unit test for the units.py module """
 import pytest
 
-from kicad2gcode.units import Unit, Length, FeedRate, Angle, Rpm
-from kicad2gcode.units import cm_min, mm_min, in_min, inch_min, m_min, ipm
-from kicad2gcode.units import deg, degree, rpm
-from kicad2gcode.units import mm, cm, um, inch, mil, thou
+from k2g.units import Unit, Length, FeedRate, Angle, Rpm
+from k2g.units import cm_min, mm_min, in_min, inch_min, m_min, ipm
+from k2g.units import deg, degree, rpm
+from k2g.units import mm, cm, um, inch, mil, thou
 
 
 def test_simple():

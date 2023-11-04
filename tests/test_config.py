@@ -19,8 +19,8 @@
 """ Unit test for the global settints confituration """
 
 # pylint: disable=E0611 # The module is fully dynamic
-from kicad2gcode.config import global_settings as gs
-from kicad2gcode.units import rpm
+from k2g.config import global_settings as gs
+from k2g.units import rpm
 
 
 def test_global_settings():

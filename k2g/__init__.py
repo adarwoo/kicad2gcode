@@ -25,4 +25,4 @@ if sys.version_info >= (3, 8):
 else:
     from importlib_metadata import metadata
 
-__version__ = metadata("kicad2gcode")["version"]
+__version__ = metadata("k2g")["version"]

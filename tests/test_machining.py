@@ -16,12 +16,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-from kicad2gcode.rack import RackManager
-from kicad2gcode.pcb_inventory import Inventory
-from kicad2gcode.utils import Coordinate
-from kicad2gcode.units import mm
-from kicad2gcode.machining import Machining, Operations
-from kicad2gcode.cutting_tools import DrillBit
+from k2g.rack import RackManager
+from k2g.pcb_inventory import Inventory
+from k2g.utils import Coordinate
+from k2g.units import mm
+from k2g.machining import Machining, Operations
+from k2g.cutting_tools import DrillBit
 
 
 inventory = Inventory()

@@ -23,14 +23,14 @@ from pathlib import Path
 
 import pytest
 
-from kicad2gcode.machining import Machining
-from kicad2gcode.operations import Operations
+from k2g.machining import Machining
+from k2g.operations import Operations
 
 
 @pytest.mark.skipif('CODESPACES' in os.environ or 'CI' in os.environ, reason="No KiCAD setup in CI")
 def test_simple_file():
     """ Test real life situation with a test PCB """
-    from kicad2gcode.board_processor import BoardProcessor
+    from k2g.board_processor import BoardProcessor
 
     # Load from this folder
     this_path = Path(__file__).resolve().parent
