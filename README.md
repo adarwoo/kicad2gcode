@@ -72,7 +72,7 @@ Options:
 
 ## Contributing
 
-My objective is to get a working application by November 2023. This should machine
+My objective is to get a working application by September 2024. This should machine
 holes and outlines (pth and npth).
 The outiline routing is turning out far more complex than I had anticipated, since
 the output data from KiCAD are dijointed segments, requiring to re-create a closed
